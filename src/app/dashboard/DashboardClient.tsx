@@ -55,7 +55,7 @@ export default function DashboardClient({ user, profile, annonces }: Props) {
   function initials() {
     const p = profile?.prenom?.[0] ?? ''
     const n = profile?.nom?.[0] ?? ''
-    return (p + n).toUpperCase() || user.email?.[0].toUpperCase() ?? '?'
+    return (p + n).toUpperCase() || (user.email?.[0].toUpperCase() ?? '?')
   }
 
   async function handleSignOut() {
@@ -248,7 +248,7 @@ function SectionCompte({ profile, user, showToast }: { profile: Profile | null; 
   const initials = () => {
     const p = profile?.prenom?.[0] ?? ''
     const n = profile?.nom?.[0] ?? ''
-    return (p + n).toUpperCase() || user.email?.[0].toUpperCase() ?? '?'
+    return (p + n).toUpperCase() || (user.email?.[0].toUpperCase() ?? '?')
   }
 
   return (
