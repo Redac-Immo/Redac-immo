@@ -2,6 +2,8 @@ export type Formule = 'basique' | 'essentiel' | 'agence'
 export type StatutAnnonce = 'encours' | 'vendu' | 'archive'
 export type Role = 'client' | 'admin'
 
+export type PersonaName = 'Élise' | 'Thomas' | 'Marc' | 'Sofia' | 'Lucas' | 'Claire'
+
 export interface Profile {
   id: string
   prenom: string | null
@@ -38,6 +40,7 @@ export interface GenerateRequest {
   pointsForts?: string
   infoCompl?: string
   formule: Formule
+  persona?: PersonaName   // optionnel — fallback sur rédacteur générique si absent
 }
 
 export interface GenerateResponse {

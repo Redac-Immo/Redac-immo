@@ -24,6 +24,7 @@ const EMPTY_FORM: FormData = {
 export default function AppPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [formule, setFormule] = useState<Formule>('essentiel')
+  const [persona, setPersona] = useState<string>('Élise')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<(GenerateResponse & { bien: string; prix: string }) | null>(null)
   const [activeTab, setActiveTab] = useState<'fr' | 'en' | 'short'>('fr')
@@ -50,7 +51,7 @@ export default function AppPage() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, formule }),
+        body: JSON.stringify({ ...form, formule, persona }),
       })
       if (!response.ok) {
         const err = await response.json()
@@ -125,6 +126,30 @@ export default function AppPage() {
               }}>
                 {f.charAt(0).toUpperCase() + f.slice(1)}
                 <span>{f === 'basique' ? '5€' : f === 'essentiel' ? '9,99€' : '65€/mois'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* PERSONA */}
+        <div>
+          <span style={labelStyle}>Persona</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {(['Élise', 'Thomas', 'Marc', 'Sofia', 'Lucas', 'Claire'] as const).map(p => (
+              <button key={p} onClick={() => setPersona(p)} style={{
+                padding: '9px 14px',
+                background: persona === p ? 'rgba(201,169,110,0.12)' : 'transparent',
+                border: `1px solid ${persona === p ? '#C9A96E' : '#333'}`,
+                color: persona === p ? '#C9A96E' : '#6B6B65',
+                fontFamily: "'DM Sans', sans-serif", fontSize: '12px',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                {p}
+                <span style={{ fontSize: '10px', opacity: 0.7 }}>
+                  {p === 'Élise' ? 'Prestige' : p === 'Thomas' ? 'Résidentiel' : p === 'Marc' ? 'Caractère' : p === 'Sofia' ? 'Neuf' : p === 'Lucas' ? 'Location' : 'Investissement'}
+                </span>
               </button>
             ))}
           </div>
