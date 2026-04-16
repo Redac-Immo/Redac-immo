@@ -295,8 +295,8 @@ const PLANS = [
     features: ['Version française complète', 'Version réseaux sociaux', 'Liens publication directe', 'Livraison sous 24h'],
     cta: 'Commander', href: '/register',
   },
-  {
-    name: 'Essentiel', amount: '9,99', unit: 'par annonce',
+    {
+    name: 'Essentiel', amount: '12', unit: '3 annonces',
     badge: 'Le plus demandé',
     featured: true,
     features: ['Version française complète', 'Version anglaise incluse', 'Version réseaux sociaux', 'Liens publication directe', 'Livraison sous 24h'],
@@ -332,7 +332,7 @@ export function Pricing() {
         {PLANS.map((plan, i) => (
           <ScrollReveal key={plan.name} delay={i * 60}>
             <div style={{
-              background: plan.founder ? 'var(--dark)' : plan.featured ? 'var(--cream)' : 'var(--cream)',
+             background: plan.founder ? '#0E0E10' : plan.featured ? 'var(--cream)' : 'var(--cream)',
               padding: '40px 32px',
               position: 'relative',
               height: '100%',
@@ -358,7 +358,7 @@ export function Pricing() {
               <div style={{
                 fontFamily: 'var(--font-cormorant), serif',
                 fontSize: '56px', fontWeight: 300, lineHeight: 1,
-                color: plan.founder ? '#FAFAF7' : 'var(--dark)',
+                color: plan.founder ? '#FAFAF7' : plan.featured ? 'var(--dark)' : 'var(--dark)',
                 marginBottom: '4px',
               }}>
                 <sup style={{ fontSize: '20px', verticalAlign: 'super' }}>€</sup>
