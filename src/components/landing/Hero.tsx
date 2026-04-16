@@ -1,5 +1,5 @@
+'use client'
 import Link from 'next/link'
-
 const PROOF_ITEMS = [
   { number: '< 30s', label: 'Temps de génération' },
   { number: 'FR + EN', label: 'Bilingue natif' },
