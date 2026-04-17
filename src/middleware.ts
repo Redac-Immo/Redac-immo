@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED_ROUTES = ['/dashboard', '/app', '/admin']
@@ -44,7 +45,13 @@ export async function middleware(request: NextRequest) {
 
   // Vérifications profil pour routes protégées
   if (user && isProtected) {
-    const { data: profile, error } = await supabase
+    // Service role pour bypasser le RLS
+    const serviceClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: profile, error } = await serviceClient
       .from('profiles')
       .select('role, blocked')
       .eq('id', user.id)
