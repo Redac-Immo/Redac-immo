@@ -28,7 +28,6 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  // Redirect non-authentifiés vers /login
   const isProtected = PROTECTED_ROUTES.some(r => pathname.startsWith(r))
   if (isProtected && !user) {
     const loginUrl = new URL('/login', request.url)
@@ -36,13 +35,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Redirect authentifiés hors pages auth
   const isAuthRoute = AUTH_ROUTES.some(r => pathname.startsWith(r))
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Vérifications supplémentaires pour les utilisateurs connectés
   if (user && isProtected) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -50,7 +47,6 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Compte bloqué → déconnexion + redirect login
     if (profile?.blocked) {
       await supabase.auth.signOut()
       const loginUrl = new URL('/login', request.url)
@@ -58,7 +54,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    // Route admin → vérification rôle
     const isAdminRoute = ADMIN_ROUTES.some(r => pathname.startsWith(r))
     if (isAdminRoute && profile?.role !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
