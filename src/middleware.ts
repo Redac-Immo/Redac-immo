@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED_ROUTES = ['/dashboard', '/app', '/admin']
@@ -29,7 +28,6 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  // Non connecté → login
   const isProtected = PROTECTED_ROUTES.some(r => pathname.startsWith(r))
   if (isProtected && !user) {
     const loginUrl = new URL('/login', request.url)
@@ -37,44 +35,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Connecté sur page auth → dashboard
   const isAuthRoute = AUTH_ROUTES.some(r => pathname.startsWith(r))
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Vérifications profil pour routes protégées
-  if (user && isProtected) {
-    // Service role pour bypasser le RLS
-    const serviceClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    const { data: profile, error } = await serviceClient
-      .from('profiles')
-      .select('role, blocked')
-      .eq('id', user.id)
-      .single()
-
-    console.log('[middleware] user:', user.id, 'profile:', profile, 'error:', error)
-
-    // Compte bloqué
-    if (profile?.blocked) {
-      await supabase.auth.signOut()
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('error', 'account_suspended')
-      return NextResponse.redirect(loginUrl)
-    }
-
-    // Route admin — vérification rôle
-    const isAdminRoute = ADMIN_ROUTES.some(r => pathname.startsWith(r))
-    if (isAdminRoute && profile?.role !== 'admin') {
-      console.log('[middleware] not admin, redirecting. role:', profile?.role)
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-  }
-
+  // Pour les routes admin, on laisse passer et on vérifie dans le Server Component
+  // La vérification du rôle se fait dans src/app/admin/page.tsx
+  
   return supabaseResponse
 }
 
