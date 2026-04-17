@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
+  // Non connecté → login
   const isProtected = PROTECTED_ROUTES.some(r => pathname.startsWith(r))
   if (isProtected && !user) {
     const loginUrl = new URL('/login', request.url)
@@ -35,18 +36,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  // Connecté sur page auth → dashboard
   const isAuthRoute = AUTH_ROUTES.some(r => pathname.startsWith(r))
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Vérifications profil pour routes protégées
   if (user && isProtected) {
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('role, blocked')
       .eq('id', user.id)
       .single()
 
+    console.log('[middleware] user:', user.id, 'profile:', profile, 'error:', error)
+
+    // Compte bloqué
     if (profile?.blocked) {
       await supabase.auth.signOut()
       const loginUrl = new URL('/login', request.url)
@@ -54,8 +60,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
+    // Route admin — vérification rôle
     const isAdminRoute = ADMIN_ROUTES.some(r => pathname.startsWith(r))
     if (isAdminRoute && profile?.role !== 'admin') {
+      console.log('[middleware] not admin, redirecting. role:', profile?.role)
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
