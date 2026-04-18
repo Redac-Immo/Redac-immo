@@ -86,20 +86,26 @@ export async function POST(request: NextRequest) {
       }
 
       // ─── Abonnement résilié ───────────────────────────────────
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        const userId = subscription.metadata?.supabase_user_id
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice
+        const customerId = typeof invoice.customer === 'string'
+          ? invoice.customer
+          : (invoice.customer as Stripe.Customer | null)?.id ?? null
 
-        if (!userId) break
+        if (!customerId) break
 
-        await service
+        const { data: profile } = await service
           .from('profiles')
-          .update({
-            plan: 'basique',
-            stripe_subscription_id: null,
-            subscription_status: 'canceled',
-          })
-          .eq('id', userId)
+          .select('id')
+          .eq('stripe_customer_id', customerId)
+          .single()
+
+        if (profile) {
+          await service
+            .from('profiles')
+            .update({ subscription_status: 'past_due' })
+            .eq('id', profile.id)
+        }
 
         break
       }
