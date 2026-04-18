@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { GenerateRequest, GenerateResponse } from '@/types'
 
 const anthropic = new Anthropic({
@@ -163,6 +164,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
     }
 
+    const service = createServiceClient()
+
+    // ─── Vérification et décrément des crédits ────────────────
+    // Les plans agence et fondateur ont des annonces illimitées.
+    // Les plans basique et essentiel consomment des crédits depuis annonce_credits.
+
+    const { data: profile } = await service
+      .from('profiles')
+      .select('plan, subscription_status')
+      .eq('id', user.id)
+      .single()
+
+    const isUnlimited = profile?.plan === 'agence' || profile?.plan === 'fondateur'
+
+    if (!isUnlimited) {
+      // Chercher le crédit le plus récent avec des crédits restants
+      const { data: credit } = await service
+        .from('annonce_credits')
+        .select('id, credits_remaining')
+        .eq('user_id', user.id)
+        .gt('credits_remaining', 0)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!credit) {
+        return NextResponse.json(
+          { error: 'Aucun crédit disponible. Veuillez commander une nouvelle annonce.' },
+          { status: 403 }
+        )
+      }
+
+      // Décrémenter le crédit AVANT la génération
+      const { error: decrementError } = await service
+        .from('annonce_credits')
+        .update({ credits_remaining: credit.credits_remaining - 1 })
+        .eq('id', credit.id)
+
+      if (decrementError) {
+        console.error('[generate] Erreur décrément crédit:', decrementError)
+        return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+      }
+    }
+
+    // ─── Génération de l'annonce ──────────────────────────────
+
     const { systemPrompt, userPrompt } = buildPrompt(body)
 
     const message = await anthropic.messages.create({
@@ -175,7 +222,8 @@ export async function POST(request: NextRequest) {
     const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
     const generated = parseResponse(rawText)
 
-    // Sauvegarde Supabase
+    // ─── Sauvegarde Supabase ──────────────────────────────────
+
     const { data: annonce } = await supabase
       .from('annonces')
       .insert({
