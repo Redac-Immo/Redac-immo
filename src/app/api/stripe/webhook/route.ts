@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
       // ─── Paiement unique réussi (Basique, Essentiel) ──────────
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.CheckoutSession
+        const session = event.data.object as Stripe.Checkout.Session
         const userId = session.metadata?.supabase_user_id
         const plan = session.metadata?.plan
 
