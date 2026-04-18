@@ -1,7 +1,6 @@
-export type Formule = 'basique' | 'essentiel' | 'agence'
+export type Formule = 'basique' | 'essentiel' | 'agence' | 'fondateur'
 export type StatutAnnonce = 'encours' | 'vendu' | 'archive'
 export type Role = 'client' | 'admin'
-
 export type PersonaName = 'Élise' | 'Thomas' | 'Marc' | 'Sofia' | 'Lucas' | 'Claire'
 
 export interface Profile {
@@ -11,6 +10,10 @@ export interface Profile {
   agence: string | null
   plan: Formule
   role: Role
+  blocked: boolean
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  subscription_status: string | null
   created_at: string
 }
 
@@ -40,7 +43,7 @@ export interface GenerateRequest {
   pointsForts?: string
   infoCompl?: string
   formule: Formule
-  persona?: PersonaName   // optionnel — fallback sur rédacteur générique si absent
+  persona?: PersonaName
 }
 
 export interface GenerateResponse {
