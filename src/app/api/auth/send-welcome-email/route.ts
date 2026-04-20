@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
     const { error: emailError } = await resend.emails.send({
       from: 'Redac-Immo <contact@redac-immo.fr>',
       to: email,
-      subject: 'Bienvenue sur Redac-Immo',
+      subject: 'Bienvenue sur Redac-Immo — Confirmez votre compte',
       html: templateConfirmationInscription({
         prenom,
-        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+        confirmationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
       }),
     })
 
