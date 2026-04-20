@@ -3,6 +3,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { GenerateRequest, GenerateResponse } from '@/types'
+import { resend } from '@/lib/resend/client'
+import { templateConfirmationAnnonce } from '@/lib/resend/templates/confirmation-annonce'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -240,6 +242,39 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single()
+
+    // ─── Envoi de l'email de confirmation ───────────────────
+    try {
+      // Récupérer le profil complet pour avoir le prénom
+      const { data: userProfile } = await service
+        .from('profiles')
+        .select('prenom')
+        .eq('id', user.id)
+        .single()
+
+      const { error: emailError } = await resend.emails.send({
+        from: 'Redac-Immo <contact@redac-immo.fr>',
+        to: user.email!,
+        subject: `Votre annonce "${body.type} — ${body.localisation}" est prête`,
+        html: templateConfirmationAnnonce({
+          prenom: userProfile?.prenom || 'Client',
+          bien: `${body.type} — ${body.localisation}`,
+          localisation: body.localisation,
+          prix: body.prix,
+          formule: body.formule,
+          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+          extrait: generated.fr.substring(0, 180),
+        }),
+      })
+
+      if (emailError) {
+        console.error('[generate] Erreur envoi email annonce:', emailError)
+        // On ne bloque pas l'utilisateur, on continue
+      }
+    } catch (emailErr) {
+      console.error('[generate] Exception email annonce:', emailErr)
+      // On continue, l'email est secondaire
+    }
 
     return NextResponse.json({ ...generated, annonceId: annonce?.id ?? null })
 
