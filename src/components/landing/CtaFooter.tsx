@@ -57,6 +57,14 @@ export function CtaFinal() {
   )
 }
 
+const FOOTER_LINKS = [
+  { label: 'Mentions légales', href: '#' },
+  { label: 'CGV', href: '/cgv' },
+  { label: 'CGU', href: '/cgu' },
+  { label: 'Confidentialité', href: '/confidentialite' },
+  { label: 'Contact', href: 'mailto:contact@redac-immo.fr' },
+]
+
 export function Footer() {
   return (
     <footer style={{
@@ -73,19 +81,17 @@ export function Footer() {
       </div>
 
       <ul style={{ display: 'flex', gap: '28px', listStyle: 'none', flexWrap: 'wrap' }}>
-        {[
-          { label: 'Mentions légales', href: '#' },
-          { label: 'Politique de confidentialité', href: '#' },
-          { label: 'CGV', href: '#' },
-          { label: 'Contact', href: 'mailto:contact@redac-immo.fr' },
-        ].map(l => (
+        {FOOTER_LINKS.map(l => (
           <li key={l.label}>
-            <a href={l.href} style={{
-              fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: '#555', textDecoration: 'none', transition: 'color 0.2s',
-            }}
-               onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold)')}
-               onMouseLeave={e => (e.currentTarget.style.color = '#555')}>
+            <a
+              href={l.href}
+              style={{
+                fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase',
+                color: '#555', textDecoration: 'none', transition: 'color 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold)')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#555')}
+            >
               {l.label}
             </a>
           </li>

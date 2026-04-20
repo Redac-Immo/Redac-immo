@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useCheckout } from '@/hooks/useCheckout'
 import type { Profile } from '@/types'
 
@@ -39,7 +40,7 @@ const PLANS = [
     name: 'Agence',
     price: '65€',
     unit: '/ mois · sans engagement',
-    features: ['Annonces illimitées', 'Versions FR + EN + réseaux sociaux', 'Dashboard agence dédié', '3 annonces offertes à l\'activation', 'Résiliable à tout moment'],
+    features: ['Annonces illimitées', 'Versions FR + EN + réseaux sociaux', 'Dashboard agence dédié', "3 annonces offertes à l'activation", 'Résiliable à tout moment'],
   },
   {
     key: 'fondateur' as const,
@@ -53,9 +54,13 @@ const PLANS = [
 
 export default function SectionCommande({ profile }: Props) {
   const { startCheckout, openPortal, loading, error } = useCheckout()
+  const [cgvAccepted, setCgvAccepted] = useState(false)
 
-  const hasActiveSubscription = profile?.subscription_status === 'active' &&
+  const hasActiveSubscription =
+    profile?.subscription_status === 'active' &&
     (profile?.plan === 'agence' || profile?.plan === 'fondateur')
+
+  const canCheckout = cgvAccepted && loading === null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -147,25 +152,54 @@ export default function SectionCommande({ profile }: Props) {
 
             <button
               onClick={() => startCheckout(plan.key)}
-              disabled={loading !== null}
+              disabled={!canCheckout}
+              title={!cgvAccepted ? 'Veuillez accepter les CGV et CGU avant de continuer' : undefined}
               style={{
                 padding: '12px 20px',
-                background: plan.recommended ? T.gold : 'transparent',
-                border: `1px solid ${plan.recommended ? T.gold : plan.founder ? 'rgba(201,169,110,0.4)' : T.border}`,
+                background: plan.recommended ? (canCheckout ? T.gold : T.goldD) : 'transparent',
+                border: `1px solid ${plan.recommended ? (canCheckout ? T.gold : T.goldD) : plan.founder ? 'rgba(201,169,110,0.4)' : T.border}`,
                 color: plan.recommended ? T.bg : plan.founder ? T.gold : T.mid,
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase',
-                cursor: loading !== null ? 'not-allowed' : 'pointer',
+                cursor: !canCheckout ? 'not-allowed' : 'pointer',
                 fontWeight: plan.recommended ? 500 : 400,
-                opacity: loading !== null ? 0.6 : 1,
+                opacity: !canCheckout ? 0.5 : 1,
                 transition: 'all 0.2s',
               }}
             >
-              {loading === plan.key ? 'Redirection…' : plan.key === 'agence' || plan.key === 'fondateur' ? 'S\'abonner' : 'Commander'}
+              {loading === plan.key ? 'Redirection…' : plan.key === 'agence' || plan.key === 'fondateur' ? "S'abonner" : 'Commander'}
             </button>
           </div>
         ))}
       </div>
+
+      {/* Case à cocher CGV — obligatoire */}
+      <div style={{ background: T.surface, border: `1px solid ${cgvAccepted ? T.gold : T.border}`, padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: '12px', transition: 'border-color 0.2s' }}>
+        <input
+          id="cgv-checkbox"
+          type="checkbox"
+          checked={cgvAccepted}
+          onChange={e => setCgvAccepted(e.target.checked)}
+          style={{ width: '16px', height: '16px', marginTop: '2px', accentColor: T.gold, cursor: 'pointer', flexShrink: 0 }}
+        />
+        <label htmlFor="cgv-checkbox" style={{ fontSize: '12px', color: T.mid, lineHeight: 1.6, cursor: 'pointer' }}>
+          J'ai lu et j'accepte les{' '}
+          <a href="/cgv" target="_blank" rel="noopener noreferrer" style={{ color: T.gold, textDecoration: 'underline' }}>
+            Conditions Générales de Vente
+          </a>
+          {' '}et les{' '}
+          <a href="/cgu" target="_blank" rel="noopener noreferrer" style={{ color: T.gold, textDecoration: 'underline' }}>
+            Conditions Générales d'Utilisation
+          </a>
+          {' '}de Redac-Immo.
+        </label>
+      </div>
+
+      {!cgvAccepted && (
+        <p style={{ fontSize: '11px', color: T.mid, textAlign: 'center', marginTop: '-12px' }}>
+          Veuillez accepter les CGV et CGU pour activer les boutons de paiement.
+        </p>
+      )}
 
       <div style={{ fontSize: '11px', color: T.mid, textAlign: 'center' }}>
         Paiement sécurisé par Stripe · Aucune donnée bancaire stockée sur nos serveurs
