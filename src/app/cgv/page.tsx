@@ -49,7 +49,7 @@ export default function CGVPage() {
           <TableLegal
             headers={['Offre', 'Tarif TTC', 'Contenu']}
             rows={[
-              ['Agence', '65,00 €/mois', 'Annonces illimitées · FR + EN · réseaux sociaux · dashboard dédié · support prioritaire · 3 annonces offertes à l'activation'],
+              ['Agence', '65,00 €/mois', "Annonces illimitées · FR + EN · réseaux sociaux · dashboard dédié · support prioritaire · 3 annonces offertes à l'activation"],
             ]}
           />
           <P>L'offre Agence est un abonnement sans engagement à durée indéterminée, renouvelé automatiquement selon les modalités de l'article 5.</P>
