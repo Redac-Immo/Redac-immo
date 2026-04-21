@@ -4,25 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import type { Profile, Annonce } from '@/types'
-
-// ─── TOKENS DARK MODE (Frieren v2.4) ──────────────────────────
-const T = {
-  bg:      '#18181A',
-  bg2:     '#1E1E20',
-  surface: '#222224',
-  surface2:'#2A2A2C',
-  dark:    '#FAFAF7',
-  gold:    '#C9A96E',
-  goldL:   '#E8D0A0',
-  goldD:   '#C9A96E',
-  goldDim: '#9A7A48',
-  mid:     '#9A9A94',
-  border:  '#333336',
-  ok:      '#4ade80',
-  okBg:    'rgba(45,106,79,0.2)',
-  err:     '#f87171',
-  errBg:   'rgba(193,18,31,0.15)',
-} as const
+import { T } from '@/lib/design-tokens'
 
 interface Props {
   user: User
@@ -90,9 +72,9 @@ export default function DashboardClient({ user, profile, annonces }: Props) {
         transform: sidebarOpen ? 'translateX(0)' : undefined,
         transition: 'transform 0.3s cubic-bezier(.4,0,.2,1)',
       }}>
-        {/* Logo */}
+        {/* Logo — ✅ CORRIGÉ : color: T.dark au lieu de T.surface */}
         <div style={{ padding: '32px 28px 24px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontWeight: 500, color: T.surface, display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontWeight: 500, color: T.dark, display: 'flex', alignItems: 'baseline', gap: '2px' }}>
             Redac<span style={{ fontWeight: 300, fontStyle: 'italic', color: T.gold }}>-Immo</span>
           </div>
           <div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.mid, marginTop: '4px' }}>
@@ -110,7 +92,7 @@ export default function DashboardClient({ user, profile, annonces }: Props) {
           }}>
             {initials()}
           </div>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: T.surface, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: T.dark, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {profile?.prenom} {profile?.nom}
           </div>
           <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: T.gold, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -130,7 +112,7 @@ export default function DashboardClient({ user, profile, annonces }: Props) {
                 padding: '11px 28px',
                 fontSize: '12px', letterSpacing: '0.08em', textTransform: 'uppercase',
                 color: activeSection === section ? T.gold : '#6B6B65',
-                background: activeSection === section ? 'rgba(201,169,110,0.06)' : 'none',
+                background: activeSection === section ? T.goldBg : 'none',
                 border: 'none',
                 borderLeft: `2px solid ${activeSection === section ? T.gold : 'transparent'}`,
                 cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
@@ -228,9 +210,10 @@ export default function DashboardClient({ user, profile, annonces }: Props) {
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION COMPTE
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionCompte({ profile, user, showToast }: { profile: Profile | null; user: User; showToast: (m: string, t?: string) => void }) {
   const [prenom, setPrenom] = useState(profile?.prenom ?? '')
   const [nom, setNom] = useState(profile?.nom ?? '')
@@ -256,7 +239,6 @@ function SectionCompte({ profile, user, showToast }: { profile: Profile | null; 
       <SectionHeader title="Mon" accent="compte" sub="Informations personnelles et sécurité" />
 
       <Card title="Profil" badge={<Badge type="ok">Vérifié</Badge>}>
-        {/* Avatar block */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '4px 0 24px', borderBottom: `1px solid ${T.border}`, marginBottom: '24px' }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: T.surface2, border: `2px solid rgba(201,169,110,0.3)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', color: T.gold, flexShrink: 0 }}>
             {initials()}
@@ -283,8 +265,7 @@ function SectionCompte({ profile, user, showToast }: { profile: Profile | null; 
         </div>
       </Card>
 
-      {/* Danger zone */}
-      <div style={{ border: '1px solid rgba(193,18,31,0.25)', background: 'rgba(193,18,31,0.06)' }}>
+      <div style={{ border: '1px solid rgba(193,18,31,0.25)', background: T.errBg }}>
         <div style={{ padding: '20px 28px', borderBottom: '1px solid rgba(193,18,31,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', color: T.err }}>Zone de danger</span>
         </div>
@@ -307,9 +288,10 @@ function SectionCompte({ profile, user, showToast }: { profile: Profile | null; 
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION ANNONCES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionAnnonces({ annonces, setAnnonces, showToast }: { annonces: Annonce[]; setAnnonces: (a: Annonce[]) => void; showToast: (m: string, t?: string) => void }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'fr' | 'en' | 'short'>('fr')
@@ -326,21 +308,16 @@ function SectionAnnonces({ annonces, setAnnonces, showToast }: { annonces: Annon
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <SectionHeader
-        title="Mes"
-        accent="annonces"
-        sub={`${annonces.length} annonce${annonces.length > 1 ? 's' : ''} générée${annonces.length > 1 ? 's' : ''}`}
-      />
+      <SectionHeader title="Mes" accent="annonces" sub={`${annonces.length} annonce${annonces.length > 1 ? 's' : ''} générée${annonces.length > 1 ? 's' : ''}`} />
 
-      {/* Filtres */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {(['all', 'encours', 'vendu', 'archive'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '7px 16px', fontFamily: "'DM Sans', sans-serif",
             fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
-            background: filter === f ? 'rgba(201,169,110,0.08)' : 'transparent',
+            background: filter === f ? T.goldBg : 'transparent',
             border: `1px solid ${filter === f ? T.gold : T.border}`,
-            color: filter === f ? T.goldD : T.mid,
+            color: filter === f ? T.gold : T.mid,
             transition: 'all 0.15s',
           }}>
             {f === 'all' ? `Toutes (${annonces.length})` : f === 'encours' ? `En cours (${annonces.filter(a => a.statut === 'encours').length})` : f === 'vendu' ? `Vendues (${annonces.filter(a => a.statut === 'vendu').length})` : `Archivées (${annonces.filter(a => a.statut === 'archive').length})`}
@@ -358,12 +335,10 @@ function SectionAnnonces({ annonces, setAnnonces, showToast }: { annonces: Annon
           {filtered.map((annonce, index) => (
             <div key={annonce.id}>
               {index > 0 && <div style={{ height: '1px', background: T.border }} />}
-
-              {/* Row */}
               <div
                 onClick={() => { setOpenId(openId === annonce.id ? null : annonce.id); setActiveTab('fr') }}
                 style={{ display: 'flex', alignItems: 'stretch', cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(201,169,110,0.05)')}
+                onMouseEnter={e => (e.currentTarget.style.background = T.goldBg)}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <div style={{ width: '3px', flexShrink: 0, background: annonce.statut === 'encours' ? T.gold : annonce.statut === 'vendu' ? T.ok : T.border }} />
@@ -387,8 +362,6 @@ function SectionAnnonces({ annonces, setAnnonces, showToast }: { annonces: Annon
                   </div>
                 </div>
               </div>
-
-              {/* Détail expandé */}
               {openId === annonce.id && (
                 <div style={{ borderTop: `1px solid ${T.border}`, padding: '0 22px 22px', background: T.bg2 }}>
                   <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, marginBottom: '20px' }}>
@@ -432,9 +405,10 @@ function SectionAnnonces({ annonces, setAnnonces, showToast }: { annonces: Annon
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION ABONNEMENT
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionAbonnement({ profile, showToast }: { profile: Profile | null; showToast: (m: string, t?: string) => void }) {
   const prix = profile?.plan === 'agence' ? '65€' : profile?.plan === 'essentiel' ? '9,99€' : '5€'
   const unite = profile?.plan === 'agence' ? '/ mois · sans engagement' : '/ annonce'
@@ -443,7 +417,6 @@ function SectionAbonnement({ profile, showToast }: { profile: Profile | null; sh
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <SectionHeader title="Mon" accent="abonnement" sub="Gestion de votre formule et renouvellement" />
 
-      {/* Plan card dark */}
       <div style={{ background: T.bg, border: `1px solid rgba(201,169,110,0.2)`, padding: '32px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', color: T.mid, marginBottom: '10px' }}>Formule active</div>
@@ -468,7 +441,6 @@ function SectionAbonnement({ profile, showToast }: { profile: Profile | null; sh
         </div>
       </div>
 
-      {/* Infos */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: T.border }}>
         {[
           { label: 'Date de début', value: '15 janvier 2026', sub: 'Activation initiale' },
@@ -483,8 +455,7 @@ function SectionAbonnement({ profile, showToast }: { profile: Profile | null; sh
         ))}
       </div>
 
-      {/* Résiliation */}
-      <div style={{ border: '1px solid rgba(193,18,31,0.25)', background: 'rgba(193,18,31,0.06)', padding: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' }}>
+      <div style={{ border: '1px solid rgba(193,18,31,0.25)', background: T.errBg, padding: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
             {profile?.plan === 'agence' ? 'Résilier la formule Agence' : 'Passer à la formule Agence'}
@@ -506,9 +477,10 @@ function SectionAbonnement({ profile, showToast }: { profile: Profile | null; sh
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION COMMANDE
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionCommande({ profile }: { profile: Profile | null }) {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
 
@@ -522,7 +494,6 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <SectionHeader title="Nouvelle" accent="commande" sub="Générez une annonce professionnelle en quelques secondes" />
 
-      {/* Formule active */}
       <div style={{ background: T.surface, border: `1px solid ${T.border}` }}>
         <div style={{ padding: '16px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.mid }}>Votre formule active</span>
@@ -534,7 +505,6 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
         </div>
       </div>
 
-      {/* Plans */}
       <div>
         <div style={{ fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: T.mid, marginBottom: '16px' }}>
           Ou commander à l'unité
@@ -574,7 +544,6 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
         </div>
       </div>
 
-      {/* CTA */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <a href="/app" style={{ padding: '11px 24px', background: T.gold, color: T.bg, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
           ✦ Générer une annonce
@@ -585,15 +554,15 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION FACTURES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionFactures() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <SectionHeader title="Mes" accent="factures" sub="Historique complet de vos paiements" />
 
-      {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: T.border }}>
         {[
           { label: 'Total facturé 2026', value: '—', sub: 'Stripe bientôt disponible' },
@@ -616,9 +585,10 @@ function SectionFactures() {
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION SUPPORT
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionSupport({ showToast }: { showToast: (m: string, t?: string) => void }) {
   const [subject, setSubject] = useState('Problème technique')
   const [message, setMessage] = useState('')
@@ -648,8 +618,6 @@ function SectionSupport({ showToast }: { showToast: (m: string, t?: string) => v
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-          {/* Formulaire */}
           <Card title="Formulaire de contact">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field label="Sujet">
@@ -670,7 +638,6 @@ function SectionSupport({ showToast }: { showToast: (m: string, t?: string) => v
             </div>
           </Card>
 
-          {/* FAQ */}
           <Card title="Questions fréquentes">
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {faqs.map((faq, i) => (
@@ -691,10 +658,8 @@ function SectionSupport({ showToast }: { showToast: (m: string, t?: string) => v
               ))}
             </div>
           </Card>
-
         </div>
 
-        {/* Contact card */}
         <div style={{ background: T.bg, padding: '28px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '80px' }}>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 300 }}>
             Besoin d'une <em style={{ fontStyle: 'italic', color: T.gold }}>réponse rapide</em> ?
@@ -721,9 +686,10 @@ function SectionSupport({ showToast }: { showToast: (m: string, t?: string) => v
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // PRIMITIVES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SectionHeader({ title, accent, sub }: { title: string; accent: string; sub: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -784,10 +750,10 @@ function Btn({ onClick, disabled, children }: { onClick: () => void; disabled?: 
 
 function Badge({ type, children }: { type: 'ok' | 'err' | 'gold' | 'mid'; children: React.ReactNode }) {
   const styles = {
-    ok:   { bg: T.okBg,                       color: T.ok,  dot: T.ok   },
-    err:  { bg: T.errBg,                       color: T.err, dot: T.err  },
-    gold: { bg: 'rgba(201,169,110,0.12)',       color: T.goldD, dot: T.gold },
-    mid:  { bg: 'rgba(107,107,101,0.2)',        color: T.mid, dot: T.mid  },
+    ok:   { bg: T.okBg, color: T.ok, dot: T.ok },
+    err:  { bg: T.errBg, color: T.err, dot: T.err },
+    gold: { bg: 'rgba(201,169,110,0.12)', color: T.gold, dot: T.gold },
+    mid:  { bg: 'rgba(107,107,101,0.2)', color: T.mid, dot: T.mid },
   }[type]
 
   return (

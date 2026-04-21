@@ -3,20 +3,10 @@
 import { useState } from 'react'
 import { useCheckout } from '@/hooks/useCheckout'
 import type { Profile } from '@/types'
+import { T } from '@/lib/design-tokens'
 
-interface Props {
+2interface Props {
   profile: Profile | null
-}
-
-// ─── TOKENS ───────────────────────────────────────────────────
-const T = {
-  bg:      '#18181A',
-  surface: '#222224',
-  border:  '#333336',
-  dark:    '#FAFAF7',
-  gold:    '#C9A96E',
-  goldD:   '#9A7A48',
-  mid:     '#9A9A94',
 }
 
 const PLANS = [
@@ -75,7 +65,7 @@ export default function SectionCommande({ profile }: Props) {
 
       {/* Erreur globale */}
       {error && (
-        <div style={{ padding: '12px 16px', background: 'rgba(193,18,31,0.1)', borderLeft: '3px solid #f87171', color: '#f87171', fontSize: '13px' }}>
+        <div style={{ padding: '12px 16px', background: T.errBg, borderLeft: `3px solid ${T.err}`, color: T.err, fontSize: '13px' }}>
           {error}
         </div>
       )}
@@ -156,8 +146,8 @@ export default function SectionCommande({ profile }: Props) {
               title={!cgvAccepted ? 'Veuillez accepter les CGV et CGU avant de continuer' : undefined}
               style={{
                 padding: '12px 20px',
-                background: plan.recommended ? (canCheckout ? T.gold : T.goldD) : 'transparent',
-                border: `1px solid ${plan.recommended ? (canCheckout ? T.gold : T.goldD) : plan.founder ? 'rgba(201,169,110,0.4)' : T.border}`,
+                background: plan.recommended ? (canCheckout ? T.gold : T.goldDim) : 'transparent',
+                border: `1px solid ${plan.recommended ? (canCheckout ? T.gold : T.goldDim) : plan.founder ? 'rgba(201,169,110,0.4)' : T.border}`,
                 color: plan.recommended ? T.bg : plan.founder ? T.gold : T.mid,
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase',

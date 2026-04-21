@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { T } from '@/lib/design-tokens'
 
-// ─── TYPES ────────────────────────────────────────────────────
+// ─── TYPES ──────────────────────────────────────────────────────────────────────
 
 interface Client {
   id: string
@@ -52,23 +53,10 @@ interface Props {
 
 type Section = 'overview' | 'clients' | 'annonces' | 'logs'
 
-// ─── TOKENS ───────────────────────────────────────────────────
-const T = {
-  bg:      '#18181A',
-  bg2:     '#111112',
-  surface: '#222224',
-  surface2:'#2A2A2C',
-  dark:    '#FAFAF7',
-  gold:    '#C9A96E',
-  mid:     '#9A9A94',
-  border:  '#2E2E30',
-  ok:      '#4ade80',
-  okBg:    'rgba(45,106,79,0.2)',
-  err:     '#f87171',
-  errBg:   'rgba(193,18,31,0.15)',
-}
+// ✅ Email admin depuis variable d'environnement (fallback sécurisé)
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'contact@redac-immo.fr'
 
-// ─── HELPERS ──────────────────────────────────────────────────
+// ─── HELPERS ────────────────────────────────────────────────────────────────────
 
 function callApi(endpoint: string, body: Record<string, unknown>) {
   return fetch(`/api/admin/${endpoint}`, {
@@ -99,7 +87,7 @@ function exportCSV(data: Record<string, unknown>[], filename: string) {
   a.click()
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────
+// ─── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
 export default function AdminClient({ adminProfile, clients, annonces, kpis }: Props) {
   const [section, setSection] = useState<Section>('overview')
@@ -120,7 +108,7 @@ export default function AdminClient({ adminProfile, clients, annonces, kpis }: P
     window.location.href = '/login'
   }
 
-  // ─── ACTIONS ──────────────────────────────────────────────
+  // ─── ACTIONS ──────────────────────────────────────────────────────────────────
 
   async function blockUser(client: Client) {
     const res = await callApi('users/block', { userId: client.id })
@@ -170,7 +158,7 @@ export default function AdminClient({ adminProfile, clients, annonces, kpis }: P
     setModal(null)
   }
 
-  // ─── RENDER ───────────────────────────────────────────────
+  // ─── RENDER ───────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: T.bg, color: T.dark, fontFamily: "'DM Sans', sans-serif" }}>
@@ -193,7 +181,7 @@ export default function AdminClient({ adminProfile, clients, annonces, kpis }: P
             <button key={key} onClick={() => { setSection(key); setSelectedClient(null) }} style={{
               display: 'flex', alignItems: 'center', gap: '12px',
               width: '100%', padding: '12px 24px', border: 'none',
-              background: section === key ? 'rgba(201,169,110,0.08)' : 'transparent',
+              background: section === key ? T.goldBg : 'transparent',
               borderLeft: `2px solid ${section === key ? T.gold : 'transparent'}`,
               color: section === key ? T.gold : '#555',
               fontSize: '12px', letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -316,9 +304,9 @@ export default function AdminClient({ adminProfile, clients, annonces, kpis }: P
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION OVERVIEW
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function SectionOverview({ kpis, clients, annonces, onExportClients }: {
   kpis: KPIs
@@ -374,9 +362,9 @@ function SectionOverview({ kpis, clients, annonces, onExportClients }: {
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION CLIENTS
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function SectionClients({ clients, onSelect, onExport }: {
   clients: Client[]
@@ -447,7 +435,7 @@ function SectionClients({ clients, onSelect, onExport }: {
   )
 }
 
-// ─── TABLE CLIENTS ────────────────────────────────
+// ─── TABLE CLIENTS ──────────────────────────────────────────────────────────────
 
 function ClientTable({ clients, onSelect, mini = false }: { clients: Client[]; onSelect: (c: Client) => void; mini?: boolean }) {
   return (
@@ -466,7 +454,7 @@ function ClientTable({ clients, onSelect, mini = false }: { clients: Client[]; o
             key={c.id}
             onClick={() => onSelect(c)}
             style={{ borderBottom: `1px solid rgba(255,255,255,0.04)`, cursor: 'pointer', transition: 'background 0.15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(201,169,110,0.04)')}
+            onMouseEnter={e => (e.currentTarget.style.background = T.goldBg)}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <td style={tdStyle}>{clientName(c)}</td>
@@ -487,9 +475,9 @@ function ClientTable({ clients, onSelect, mini = false }: { clients: Client[]; o
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // FICHE CLIENT
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function FicheClient({ client, annonces, onBack, onBlock, onUnblock, onDelete, onChangePlan, onReadAnnonce, showToast }: {
   client: Client
@@ -560,7 +548,7 @@ function FicheClient({ client, annonces, onBack, onBlock, onUnblock, onDelete, o
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ ...labelStyle, marginBottom: '4px', display: 'block' }}>Actions</div>
             <a
-              href={`mailto:contact@redac-immo.fr?subject=Votre compte Redac-Immo&to=${client.email}`}
+              href={`mailto:${ADMIN_EMAIL}?subject=Votre compte Redac-Immo&to=${client.email}`}
               style={{ ...outlineBtn, textAlign: 'center', textDecoration: 'none', display: 'block' }}
             >
               ✉ Envoyer un email
@@ -621,9 +609,9 @@ function FicheClient({ client, annonces, onBack, onBlock, onUnblock, onDelete, o
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION ANNONCES GLOBALES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function SectionAnnonces({ annonces, clients, onDelete, onRead, onExport }: {
   annonces: Annonce[]
@@ -713,9 +701,9 @@ function SectionAnnonces({ annonces, clients, onDelete, onRead, onExport }: {
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // MODALES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
@@ -789,9 +777,9 @@ function AnnonceModal({ annonce, onClose }: { annonce: Annonce; onClose: () => v
   )
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // BADGES & PRIMITIVES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function StatusBadge({ blocked }: { blocked: boolean }) {
   return (
@@ -831,7 +819,7 @@ function StatutBadge({ statut }: { statut: string }) {
   )
 }
 
-// ─── STYLES PARTAGÉS ──────────────────────────────
+// ─── STYLES PARTAGÉS ────────────────────────────────────────────────────────────
 
 const thStyle: React.CSSProperties = {
   padding: '10px 16px', textAlign: 'left',

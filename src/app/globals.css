@@ -47,6 +47,30 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
+   ACCESSIBILITÉ — FOCUS VISIBLE
+═══════════════════════════════════════════════════ */
+/* ✅ AJOUTÉ : Style de focus pour navigation au clavier */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+  border-radius: 2px;
+}
+
+/* Supprimer l'outline par défaut pour les utilisateurs souris */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════════════
    GRID OVERLAY
 ═══════════════════════════════════════════════════ */
 body::before {

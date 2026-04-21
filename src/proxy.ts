@@ -2,23 +2,24 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED_ROUTES = ['/dashboard', '/app', '/admin']
-const ADMIN_ROUTES = ['/admin']
 const AUTH_ROUTES = ['/login', '/register']
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+export async function proxy(request: NextRequest) {
+  let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           )
         },
       },
@@ -28,6 +29,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
+  // Redirection si route protégée et non connecté
   const isProtected = PROTECTED_ROUTES.some(r => pathname.startsWith(r))
   if (isProtected && !user) {
     const loginUrl = new URL('/login', request.url)
@@ -35,15 +37,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  // Redirection si déjà connecté sur une route d'auth
   const isAuthRoute = AUTH_ROUTES.some(r => pathname.startsWith(r))
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Pour les routes admin, on laisse passer et on vérifie dans le Server Component
-  // La vérification du rôle se fait dans src/app/admin/page.tsx
-  
-  return supabaseResponse
+  // Vérification du blocage utilisateur
+  if (user && pathname.startsWith('/dashboard')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('blocked')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.blocked) {
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/login?error=blocked', request.url))
+    }
+  }
+
+  // Pour /admin, la vérification du rôle est faite dans le Server Component
+  // C'est plus sécurisé car le service role bypass le RLS
+
+  return response
 }
 
 export const config = {

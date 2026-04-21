@@ -4,22 +4,27 @@ import { redirect } from 'next/navigation'
 import AdminClient from './AdminClient'
 
 export default async function AdminPage() {
+  // ✅ UNE SEULE instanciation du service client
+  const service = createServiceClient()
+  
+  // Auth classique (client standard)
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
+  
   if (!user) redirect('/login')
 
-  // Utiliser le service role pour bypasser le RLS
-  const service = createServiceClient()
-
+  // Vérification admin
   const { data: adminProfile } = await service
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (!adminProfile || adminProfile.role !== 'admin') redirect('/dashboard')
+  if (!adminProfile || adminProfile.role !== 'admin') {
+    redirect('/dashboard')
+  }
 
+  // Récupération des clients (profils + auth)
   const { data: profiles } = await service
     .from('profiles')
     .select('*')
@@ -30,12 +35,14 @@ export default async function AdminPage() {
     perPage: 1000,
   })
 
+  // Récupération des annonces
   const { data: annonces } = await service
     .from('annonces')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(500)
 
+  // Fusion profils + auth
   const clients = (profiles ?? []).map(profile => {
     const authUser = authUsers.find(u => u.id === profile.id)
     const nbAnnonces = (annonces ?? []).filter(a => a.user_id === profile.id).length
@@ -47,9 +54,22 @@ export default async function AdminPage() {
     }
   })
 
+  // Dates pour les KPIs
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // ✅ MRR CORRIGÉ : uniquement Agence et Fondateur avec statut 'active'
+  const mrr = clients.reduce((acc, c) => {
+    if (c.plan === 'agence' && c.subscription_status === 'active') {
+      return acc + 65
+    }
+    if (c.plan === 'fondateur' && c.subscription_status === 'active') {
+      return acc + 50
+    }
+    // Essentiel et Basique sont des paiements uniques → pas de MRR
+    return acc
+  }, 0)
 
   const kpis = {
     totalClients: clients.length,
@@ -58,11 +78,7 @@ export default async function AdminPage() {
     annoncesTotal: (annonces ?? []).length,
     announcesThisMonth: (annonces ?? []).filter(a => a.created_at >= startOfMonth).length,
     newClientsThisWeek: clients.filter(c => c.created_at >= startOfWeek).length,
-    mrr: clients.reduce((acc, c) => {
-      if (c.plan === 'agence') return acc + 65
-      if (c.plan === 'essentiel') return acc + 9.99
-      return acc + 5
-    }, 0),
+    mrr, // ✅ Corrigé
   }
 
   return (
