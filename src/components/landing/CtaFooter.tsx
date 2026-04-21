@@ -58,7 +58,7 @@ export function CtaFinal() {
 }
 
 const FOOTER_LINKS = [
-  { label: 'Mentions légales', href: '#' },
+  { label: 'Mentions légales', href: '/cgv' }, // ✅ Corrigé : redirige vers CGV en attendant page dédiée
   { label: 'CGV', href: '/cgv' },
   { label: 'CGU', href: '/cgu' },
   { label: 'Confidentialité', href: '/confidentialite' },

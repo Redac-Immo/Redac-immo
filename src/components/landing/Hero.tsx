@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+
 const PROOF_ITEMS = [
   { number: '< 30s', label: 'Temps de génération' },
   { number: 'FR + EN', label: 'Bilingue natif' },
@@ -102,7 +103,7 @@ export default function Hero() {
                 display: 'inline-block', transition: 'all 0.25s',
               }}
             >
-              Commencer gratuitement
+              Créer un compte
             </Link>
           </div>
 

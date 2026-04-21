@@ -31,7 +31,11 @@ export default function ScrollReveal({ children, delay = 0, className = '' }: Pr
     )
 
     observer.observe(el)
-    return () => observer.disconnect()
+
+    return () => {
+      if (el) observer.unobserve(el)
+      observer.disconnect()
+    }
   }, [delay])
 
   return (

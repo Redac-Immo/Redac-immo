@@ -19,9 +19,11 @@ export function useUser(): UseUserReturn {
 
   useEffect(() => {
     const supabase = createClient()
+    let cancelled = false
 
     async function loadUser() {
       const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled) return
       setUser(user)
 
       if (user) {
@@ -30,22 +32,36 @@ export function useUser(): UseUserReturn {
           .select('*')
           .eq('id', user.id)
           .single()
-        setProfile(data)
+        if (!cancelled) setProfile(data)
       }
 
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     }
 
     loadUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
-        if (!session?.user) setProfile(null)
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+
+        if (currentUser) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+          if (!cancelled) setProfile(data)
+        } else {
+          setProfile(null)
+        }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function signOut() {

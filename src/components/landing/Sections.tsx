@@ -295,7 +295,7 @@ const PLANS = [
     features: ['Version française complète', 'Version réseaux sociaux', 'Liens publication directe', 'Livraison sous 24h'],
     cta: 'Commander', href: '/register',
   },
-    {
+  {
     name: 'Essentiel', amount: '12', unit: '3 annonces',
     badge: 'Le plus demandé',
     featured: true,
@@ -304,7 +304,7 @@ const PLANS = [
   },
   {
     name: 'Agence', amount: '65', unit: '/ mois · résiliable à tout moment',
-    features: ['Annonces illimitées', 'Versions française & anglaise', 'Version réseaux sociaux', 'Liens publication directe', 'Dashboard agence dédié', '3 annonces offertes à l\'activation', 'Résiliable à tout moment'],
+    features: ['Annonces illimitées', 'Versions française & anglaise', 'Version réseaux sociaux', 'Liens publication directe', 'Dashboard agence dédié', "3 annonces offertes à l'activation", 'Résiliable à tout moment'],
     cta: 'Nous contacter', href: 'mailto:contact@redac-immo.fr',
   },
   {
@@ -332,7 +332,7 @@ export function Pricing() {
         {PLANS.map((plan, i) => (
           <ScrollReveal key={plan.name} delay={i * 60}>
             <div style={{
-             background: plan.founder ? '#0E0E10' : plan.featured ? 'var(--cream)' : 'var(--cream)',
+              background: plan.founder ? '#0E0E10' : plan.featured ? 'var(--cream)' : 'var(--cream)',
               padding: '40px 32px',
               position: 'relative',
               height: '100%',
@@ -368,20 +368,22 @@ export function Pricing() {
                 {plan.unit}
               </div>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, marginBottom: '28px' }}>
-                {plan.features.map(f => (
-                  <li key={f} style={{
-                    fontSize: '13px', lineHeight: 1.5,
-                    color: plan.founder ? '#888' : 'var(--mid)',
-                    display: 'flex', alignItems: 'flex-start', gap: '8px',
-                  }}>
-                    <span style={{ color: 'var(--gold)', flexShrink: 0, marginTop: '1px' }}>—</span>
-                    <span dangerouslySetInnerHTML={{
-                      __html: f.includes('offertes') || f.includes('garanti') || f.includes('Réservé')
-                        ? `<strong style="color:var(--gold)">${f}</strong>`
-                        : f
-                    }} />
-                  </li>
-                ))}
+                {plan.features.map(f => {
+                  // ✅ Rendu sécurisé sans dangerouslySetInnerHTML
+                  const isHighlighted = f.includes('offertes') || f.includes('garanti') || f.includes('Réservé')
+                  return (
+                    <li key={f} style={{
+                      fontSize: '13px', lineHeight: 1.5,
+                      color: plan.founder ? '#888' : 'var(--mid)',
+                      display: 'flex', alignItems: 'flex-start', gap: '8px',
+                    }}>
+                      <span style={{ color: 'var(--gold)', flexShrink: 0, marginTop: '1px' }}>—</span>
+                      {isHighlighted ? (
+                        <strong style={{ color: 'var(--gold)' }}>{f}</strong>
+                      ) : f}
+                    </li>
+                  )
+                })}
               </ul>
               <a
                 href={plan.href}

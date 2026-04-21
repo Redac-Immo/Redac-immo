@@ -47,6 +47,7 @@ export default function Nav() {
   return (
     <>
       <nav
+        suppressHydrationWarning
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
           padding: '20px 60px',
