@@ -49,10 +49,15 @@ export async function logAdminAction({
   details?: Record<string, unknown>
 }) {
   const service = createServiceClient()
-  await service.from('admin_logs').insert({
-    admin_id: adminId,
-    action,
-    target_id: targetId ?? null,
-    details: details ?? null,
-  })
+  try {
+    await service.from('admin_logs').insert({
+      admin_id: adminId,
+      action,
+      target_id: targetId ?? null,
+      details: details ?? null,
+    })
+  } catch (error) {
+    console.error('[logAdminAction] Erreur insertion log:', error)
+    // Ne pas bloquer l'action principale
+  }
 }

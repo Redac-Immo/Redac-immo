@@ -5,5 +5,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  // Dernière vérification : 2026-03-25.dahlia (mars 2026)
+  // À mettre à jour si Stripe publie une nouvelle version stable
   apiVersion: '2026-03-25.dahlia',
 })
