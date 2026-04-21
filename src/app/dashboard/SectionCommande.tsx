@@ -5,7 +5,7 @@ import { useCheckout } from '@/hooks/useCheckout'
 import type { Profile } from '@/types'
 import { T } from '@/lib/design-tokens'
 
-2interface Props {
+interface Props {
   profile: Profile | null
 }
 
