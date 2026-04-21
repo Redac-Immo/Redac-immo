@@ -44,11 +44,18 @@ interface KPIs {
   mrr: number
 }
 
+interface PaginationProps {
+  currentPage: number
+  totalPages: number
+  totalClients: number
+}
+
 interface Props {
   adminProfile: { prenom: string | null; nom: string | null }
   clients: Client[]
   annonces: Annonce[]
   kpis: KPIs
+  pagination: PaginationProps
 }
 
 type Section = 'overview' | 'clients' | 'annonces' | 'logs'
@@ -89,7 +96,7 @@ function exportCSV(data: Record<string, unknown>[], filename: string) {
 
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
-export default function AdminClient({ adminProfile, clients, annonces, kpis }: Props) {
+export default function AdminClient({ adminProfile, clients, annonces, kpis, pagination }: Props) {
   const [section, setSection] = useState<Section>('overview')
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
@@ -217,6 +224,7 @@ export default function AdminClient({ adminProfile, clients, annonces, kpis }: P
             clients={localClients}
             onSelect={setSelectedClient}
             onExport={() => exportCSV(localClients.map(c => ({ nom: clientName(c), email: c.email, plan: c.plan, blocked: c.blocked, inscrit: formatDate(c.created_at), annonces: c.nb_annonces })), 'clients.csv')}
+            pagination={pagination}
           />
         )}
 
@@ -366,10 +374,11 @@ function SectionOverview({ kpis, clients, annonces, onExportClients }: {
 // SECTION CLIENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function SectionClients({ clients, onSelect, onExport }: {
+function SectionClients({ clients, onSelect, onExport, pagination }: {
   clients: Client[]
   onSelect: (c: Client) => void
   onExport: () => void
+  pagination: PaginationProps
 }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'actif' | 'bloqué' | 'basique' | 'essentiel' | 'agence'>('all')
@@ -401,7 +410,9 @@ function SectionClients({ clients, onSelect, onExport }: {
       <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: 300 }}>Clients</h1>
-          <p style={{ fontSize: '12px', color: T.mid, marginTop: '4px' }}>{filtered.length} client{filtered.length > 1 ? 's' : ''}</p>
+          <p style={{ fontSize: '12px', color: T.mid, marginTop: '4px' }}>
+            {pagination.totalClients} client{pagination.totalClients > 1 ? 's' : ''} · Page {pagination.currentPage} sur {pagination.totalPages}
+          </p>
         </div>
         <button onClick={onExport} style={outlineBtn}>Exporter CSV</button>
       </div>
@@ -431,6 +442,53 @@ function SectionClients({ clients, onSelect, onExport }: {
       </div>
 
       <ClientTable clients={filtered} onSelect={onSelect} />
+
+      {/* ✅ PAGINATION */}
+      {pagination.totalPages > 1 && (
+        <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+          <a
+            href={`/admin?page=${pagination.currentPage - 1}`}
+            style={{
+              padding: '8px 20px',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: pagination.currentPage === 1 ? T.mid : T.gold,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              cursor: pagination.currentPage === 1 ? 'not-allowed' : 'pointer',
+              opacity: pagination.currentPage === 1 ? 0.5 : 1,
+              pointerEvents: pagination.currentPage === 1 ? 'none' : 'auto',
+            }}
+          >
+            ← Précédent
+          </a>
+          <span style={{ fontSize: '13px', color: T.mid, padding: '0 8px' }}>
+            Page {pagination.currentPage} / {pagination.totalPages}
+          </span>
+          <a
+            href={`/admin?page=${pagination.currentPage + 1}`}
+            style={{
+              padding: '8px 20px',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: pagination.currentPage === pagination.totalPages ? T.mid : T.gold,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              cursor: pagination.currentPage === pagination.totalPages ? 'not-allowed' : 'pointer',
+              opacity: pagination.currentPage === pagination.totalPages ? 0.5 : 1,
+              pointerEvents: pagination.currentPage === pagination.totalPages ? 'none' : 'auto',
+            }}
+          >
+            Suivant →
+          </a>
+        </div>
+      )}
     </div>
   )
 }
@@ -539,7 +597,7 @@ function FicheClient({ client, annonces, onBack, onBlock, onUnblock, onDelete, o
               style={{ ...inputStyle, width: '100%' }}
             >
               <option value="basique">Basique — 5€</option>
-              <option value="essentiel">Essentiel — 9,99€</option>
+              <option value="essentiel">Essentiel — 12€</option>
               <option value="agence">Agence — 65€/mois</option>
             </select>
           </div>
