@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { href: '#methode',        label: 'Notre méthode' },
   { href: '#exemples',       label: 'Exemples' },
   { href: '#fonctionnalites',label: 'Fonctionnalités' },
-  { href: '#tarifs',         label: 'Tarifs' },
+  { href: '/tarifs',         label: 'Tarifs' },  // ✅ Modifié : pointe vers la page dédiée
   { href: '#faq',            label: 'FAQ' },
 ]
 
@@ -75,11 +75,11 @@ export default function Nav() {
             className="nav-desktop">
           {NAV_LINKS.map(l => (
             <li key={l.href}>
-              <a href={l.href} style={{ fontSize: '12px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--mid)', textDecoration: 'none', transition: 'color 0.2s' }}
+              <Link href={l.href} style={{ fontSize: '12px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--mid)', textDecoration: 'none', transition: 'color 0.2s' }}
                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--dark)')}
                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--mid)')}>
                 {l.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
@@ -194,7 +194,7 @@ export default function Nav() {
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 24px', gap: 0 }}>
           {NAV_LINKS.map(l => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               onClick={closeMenu}
@@ -209,7 +209,7 @@ export default function Nav() {
               onMouseLeave={e => (e.currentTarget.style.color = '#9A9A94')}
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </div>
 

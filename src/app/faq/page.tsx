@@ -44,6 +44,23 @@ const FAQS = [
     q: "La version r\u00e9seaux sociaux est-elle incluse dans toutes les offres\u00a0?",
     a: "Oui. Chaque annonce g\u00e9n\u00e9r\u00e9e inclut une version courte (280 caract\u00e8res max) adapt\u00e9e \u00e0 Instagram, Facebook et LinkedIn, quelle que soit la formule choisie.",
   },
+  // ✅ Nouvelles questions
+  {
+    q: "Proposez-vous une p\u00e9riode d'essai gratuite ?",
+    a: "Nous n'avons pas d'essai gratuit automatique, mais nous offrons 3 annonces \u00e0 l'activation de la formule Agence. Pour tester la qualit\u00e9, vous pouvez commander une annonce Basique \u00e0 5\u20ac sans engagement.",
+  },
+  {
+    q: "Quels sont les d\u00e9lais de livraison r\u00e9els ?",
+    a: "La g\u00e9n\u00e9ration prend moins de 30 secondes. L'annonce est disponible imm\u00e9diatement dans votre espace client. Le d\u00e9lai de 24h est une garantie maximale en cas d'incident technique.",
+  },
+  {
+    q: "Puis-je utiliser les annonces sur tous les portails ?",
+    a: "Oui. Les annonces sont livr\u00e9es en texte brut, compatibles avec tous les portails : LeBonCoin, SeLoger, Bien'ici, PAP, Logic-immo, et les portails internationaux comme Rightmove ou Zoopla.",
+  },
+  {
+    q: "Comment sont calcul\u00e9s les 3 cr\u00e9dits de la formule Essentiel ?",
+    a: "Chaque g\u00e9n\u00e9ration d'annonce consomme 1 cr\u00e9dit. Vous pouvez g\u00e9n\u00e9rer 3 annonces compl\u00e8tes (FR + EN + r\u00e9seaux sociaux). Les cr\u00e9dits n'expirent pas et sont utilisables quand vous le souhaitez.",
+  },
 ]
 
 export default function FaqPage() {
@@ -142,7 +159,7 @@ export default function FaqPage() {
 
       <footer>
         <div className="footer-logo"><span>Redac</span><span>Immo</span></div>
-        <div className="footer-copy">© 2025 Redac-Immo — Tous droits réservés</div>
+        <div className="footer-copy">© 2026 Redac-Immo — Tous droits réservés</div>
       </footer>
     </>
   )

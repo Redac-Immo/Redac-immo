@@ -7,9 +7,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Routes statiques — pages fixes du site
   const staticRoutes = [
     { url: `${baseUrl}`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 1.0 },
+    { url: `${baseUrl}/tarifs`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.8 },
+    { url: `${baseUrl}/faq`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.6 },
     { url: `${baseUrl}/cgv`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.3 },
     { url: `${baseUrl}/cgu`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.3 },
     { url: `${baseUrl}/confidentialite`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.3 },
+    { url: `${baseUrl}/mentions-legales`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.3 },
   ]
 
   // Routes dynamiques — pages qui dépendent de données
