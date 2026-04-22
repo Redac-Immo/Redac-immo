@@ -50,12 +50,19 @@ interface PaginationProps {
   totalClients: number
 }
 
+interface AnnoncesPaginationProps {
+  currentPage: number
+  totalPages: number
+  totalAnnonces: number
+}
+
 interface Props {
   adminProfile: { prenom: string | null; nom: string | null }
   clients: Client[]
   annonces: Annonce[]
   kpis: KPIs
   pagination: PaginationProps
+  annoncesPagination: AnnoncesPaginationProps
 }
 
 type Section = 'overview' | 'clients' | 'annonces' | 'logs'
@@ -96,7 +103,7 @@ function exportCSV(data: Record<string, unknown>[], filename: string) {
 
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
-export default function AdminClient({ adminProfile, clients, annonces, kpis, pagination }: Props) {
+export default function AdminClient({ adminProfile, clients, annonces, kpis, pagination, annoncesPagination }: Props) {
   const [section, setSection] = useState<Section>('overview')
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
@@ -251,6 +258,7 @@ export default function AdminClient({ adminProfile, clients, annonces, kpis, pag
             onDelete={(a) => setModal({ type: 'delete-annonce', annonce: a })}
             onRead={(a) => setModal({ type: 'read-annonce', annonce: a })}
             onExport={() => exportCSV(localAnnonces.map(a => ({ bien: a.bien, localisation: a.localisation, formule: a.formule, statut: a.statut, date: formatDate(a.created_at) })), 'annonces.csv')}
+            pagination={annoncesPagination}
           />
         )}
 
@@ -443,7 +451,7 @@ function SectionClients({ clients, onSelect, onExport, pagination }: {
 
       <ClientTable clients={filtered} onSelect={onSelect} />
 
-      {/* ✅ PAGINATION */}
+      {/* ✅ PAGINATION CLIENTS */}
       {pagination.totalPages > 1 && (
         <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
           <a
@@ -671,12 +679,13 @@ function FicheClient({ client, annonces, onBack, onBlock, onUnblock, onDelete, o
 // SECTION ANNONCES GLOBALES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function SectionAnnonces({ annonces, clients, onDelete, onRead, onExport }: {
+function SectionAnnonces({ annonces, clients, onDelete, onRead, onExport, pagination }: {
   annonces: Annonce[]
   clients: Client[]
   onDelete: (a: Annonce) => void
   onRead: (a: Annonce) => void
   onExport: () => void
+  pagination: AnnoncesPaginationProps
 }) {
   const [search, setSearch] = useState('')
   const [filterStatut, setFilterStatut] = useState('all')
@@ -704,11 +713,14 @@ function SectionAnnonces({ annonces, clients, onDelete, onRead, onExport }: {
       <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: 300 }}>Annonces</h1>
-          <p style={{ fontSize: '12px', color: T.mid, marginTop: '4px' }}>{filtered.length} annonce{filtered.length > 1 ? 's' : ''}</p>
+          <p style={{ fontSize: '12px', color: T.mid, marginTop: '4px' }}>
+            {pagination.totalAnnonces} annonce{pagination.totalAnnonces > 1 ? 's' : ''} · Page {pagination.currentPage} sur {pagination.totalPages}
+          </p>
         </div>
         <button onClick={onExport} style={outlineBtn}>Exporter CSV</button>
       </div>
 
+      {/* Filtres */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
         <input type="text" placeholder="Rechercher bien ou localisation…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, maxWidth: '280px' }} />
         <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)} style={inputStyle}>
@@ -755,6 +767,53 @@ function SectionAnnonces({ annonces, clients, onDelete, onRead, onExport }: {
           )}
         </tbody>
       </table>
+
+      {/* ✅ PAGINATION ANNONCES */}
+      {pagination.totalPages > 1 && (
+        <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+          <a
+            href={`/admin?annoncesPage=${pagination.currentPage - 1}`}
+            style={{
+              padding: '8px 20px',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: pagination.currentPage === 1 ? T.mid : T.gold,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              cursor: pagination.currentPage === 1 ? 'not-allowed' : 'pointer',
+              opacity: pagination.currentPage === 1 ? 0.5 : 1,
+              pointerEvents: pagination.currentPage === 1 ? 'none' : 'auto',
+            }}
+          >
+            ← Précédent
+          </a>
+          <span style={{ fontSize: '13px', color: T.mid, padding: '0 8px' }}>
+            Page {pagination.currentPage} / {pagination.totalPages}
+          </span>
+          <a
+            href={`/admin?annoncesPage=${pagination.currentPage + 1}`}
+            style={{
+              padding: '8px 20px',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: pagination.currentPage === pagination.totalPages ? T.mid : T.gold,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              cursor: pagination.currentPage === pagination.totalPages ? 'not-allowed' : 'pointer',
+              opacity: pagination.currentPage === pagination.totalPages ? 0.5 : 1,
+              pointerEvents: pagination.currentPage === pagination.totalPages ? 'none' : 'auto',
+            }}
+          >
+            Suivant →
+          </a>
+        </div>
+      )}
     </div>
   )
 }
