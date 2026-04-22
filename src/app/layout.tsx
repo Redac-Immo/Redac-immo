@@ -36,15 +36,15 @@ export const metadata: Metadata = {
   authors: [{ name: 'Redac-Immo' }],
   robots: 'index, follow',
   alternates: {
-    canonical: 'https://www.redac-immo.fr/',
+    canonical: 'https://redac-immo.fr/',
   },
   openGraph: {
     type: 'website',
-    url: 'https://www.redac-immo.fr/',
+    url: 'https://redac-immo.fr/',
     title: 'Redac-Immo — Annonces immobilières professionnelles en 24h',
     description:
       'Des annonces au niveau des grandes agences — en français et en anglais, livrées sous 24h. À partir de 5€, sans abonnement.',
-    images: [{ url: 'https://www.redac-immo.fr/og-image.jpg' }],
+    images: [{ url: 'https://redac-immo.fr/og-image.jpg' }],
     locale: 'fr_FR',
     siteName: 'Redac-Immo',
   },
@@ -53,7 +53,11 @@ export const metadata: Metadata = {
     title: 'Redac-Immo — Annonces immobilières professionnelles en 24h',
     description:
       'Des annonces au niveau des grandes agences — en français et en anglais, livrées sous 24h.',
-    images: ['https://www.redac-immo.fr/og-image.jpg'],
+    images: ['https://redac-immo.fr/og-image.jpg'],
+  },
+  // ✅ Google Search Console verification
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 }
 
