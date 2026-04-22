@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+// ✅ ISR : Revalidation toutes les heures (3600 secondes)
+export const revalidate = 3600
+
 const FAQS = [
   {
     q: "En quoi Redac-Immo est-il diff\u00e9rent d\u2019un r\u00e9dacteur humain\u00a0?",

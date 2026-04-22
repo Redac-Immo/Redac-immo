@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
+// ✅ ISR : Revalidation toutes les heures (3600 secondes)
+export const revalidate = 3600
+
 export const metadata: Metadata = {
   title: 'Tarifs — Redac-Immo',
   description: 'Des tarifs transparents, à l\'annonce ou au forfait. À partir de 5€ par annonce, sans engagement.',

@@ -5,6 +5,9 @@ import { HowItWorks, Methode, SampleListings, Features, Pricing, EarlyAccess } f
 import FAQ from '@/components/landing/FAQ'
 import { CtaFinal, Footer } from '@/components/landing/CtaFooter'
 
+// ✅ ISR : Revalidation toutes les heures (3600 secondes)
+export const revalidate = 3600
+
 export default function HomePage() {
   return (
     <>
