@@ -70,7 +70,7 @@ export function HowItWorks() {
         {STEPS.map((step, i) => (
           <ScrollReveal key={step.title} delay={i * 80}>
             <div style={{ background: 'var(--cream)', padding: '48px 36px', transition: 'background 0.3s' }}
-                 onMouseEnter={e => (e.currentTarget.style.background = '#fff')}
+                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--cream)')}>
               <div style={{
                 fontFamily: 'var(--font-cormorant), serif',
@@ -137,7 +137,7 @@ export function Methode() {
         {METHODE.map((m, i) => (
           <ScrollReveal key={m.num} delay={i * 80}>
             <div style={{ background: 'var(--cream)', padding: '48px 36px', transition: 'background 0.3s', height: '100%' }}
-                 onMouseEnter={e => (e.currentTarget.style.background = '#fff')}
+                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--cream)')}>
               <div style={{
                 fontFamily: 'var(--font-cormorant), serif',
@@ -205,8 +205,8 @@ export function SampleListings() {
         {SAMPLES.map((s, i) => (
           <ScrollReveal key={s.title} delay={i * 80}>
             <div style={{
-              background: '#fff',
-              border: '1px solid var(--light)',
+              background: 'var(--dark2)',
+              border: '1px solid rgba(201,169,110,0.15)',
               borderTop: '2px solid var(--gold)',
               padding: '36px',
               height: '100%',
@@ -214,10 +214,10 @@ export function SampleListings() {
               <div style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '12px' }}>
                 {s.flag} {s.tag}
               </div>
-              <div style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: '20px', fontWeight: 500, color: '#18181A', marginBottom: '16px', lineHeight: 1.3 }}>
+              <div style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: '20px', fontWeight: 500, color: 'var(--cream)', marginBottom: '16px', lineHeight: 1.3 }}>
                 {s.title}
               </div>
-              <div style={{ fontSize: '13px', lineHeight: 1.8, color: '#444' }}>
+              <div style={{ fontSize: '13px', lineHeight: 1.8, color: 'var(--mid)' }}>
                 {s.text}
               </div>
             </div>
@@ -259,7 +259,7 @@ export function Features() {
         {FEATURES.map((f, i) => (
           <ScrollReveal key={f.title} delay={i * 60}>
             <div style={{ background: 'var(--cream)', padding: '44px 40px', transition: 'background 0.3s', height: '100%' }}
-                 onMouseEnter={e => (e.currentTarget.style.background = '#fff')}
+                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--cream)')}>
               <div style={{
                 width: '44px', height: '44px',
@@ -305,13 +305,13 @@ const PLANS = [
   {
     name: 'Agence', amount: '65', unit: '/ mois · résiliable à tout moment',
     features: ['Annonces illimitées', 'Versions française & anglaise', 'Version réseaux sociaux', 'Liens publication directe', 'Dashboard agence dédié', "3 annonces offertes à l'activation", 'Résiliable à tout moment'],
-    cta: 'Nous contacter', href: 'mailto:contact@redac-immo.fr',
+    cta: 'Commander', href: '/register',
   },
   {
     name: 'Agence · Fondateur', amount: '50', unit: '/ mois · à vie · 10 places',
     badge: 'Offre fondateur', founder: true,
     features: ['Toutes les fonctionnalités Agence', 'Prix garanti à vie sur votre compte', 'Accès prioritaire aux nouvelles fonctionnalités', 'Réservé aux 10 premiers abonnés'],
-    cta: 'Réserver ma place', href: 'mailto:contact@redac-immo.fr',
+    cta: 'Commander', href: '/register',
   },
 ]
 
@@ -369,7 +369,6 @@ export function Pricing() {
               </div>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, marginBottom: '28px' }}>
                 {plan.features.map(f => {
-                  // ✅ Rendu sécurisé sans dangerouslySetInnerHTML
                   const isHighlighted = f.includes('offertes') || f.includes('garanti') || f.includes('Réservé')
                   return (
                     <li key={f} style={{
@@ -442,7 +441,7 @@ export function EarlyAccess() {
         ].map((card, i) => (
           <ScrollReveal key={card.title} delay={i * 80}>
             <div style={{ background: 'var(--cream)', padding: '48px 36px', transition: 'background 0.3s', height: '100%' }}
-                 onMouseEnter={e => (e.currentTarget.style.background = '#fff')}
+                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--cream)')}>
               <span style={{ fontSize: '22px', color: 'var(--gold)', marginBottom: '20px', display: 'block' }}>
                 {card.icon}
