@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Cormorant_Garamond, DM_Sans } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
+import CookieBanner from '@/components/CookieBanner'
 import './globals.css'
 
 // ─── FONTS ────────────────────────────────────────────────────
@@ -74,6 +75,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           {children}
         </ThemeProvider>
+        {/* ✅ Bannière cookies */}
+        <CookieBanner />
       </body>
     </html>
   )
