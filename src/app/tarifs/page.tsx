@@ -76,17 +76,22 @@ const PLANS = [
 export default function TarifsPage() {
   return (
     <>
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #18181A !important; }
+      `}</style>
+
       {/* Navigation */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         padding: '20px 60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(250,250,247,0.98)',
+        background: 'rgba(24,24,26,0.98)',
         backdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(201,169,110,0.25)',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'baseline', gap: '2px', textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: '26px', fontWeight: 500, color: '#18181A' }}>
+          <span style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: '26px', fontWeight: 500, color: '#FAFAF7' }}>
             Redac
           </span>
           <span style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: '26px', fontWeight: 300, fontStyle: 'italic', color: '#C9A96E' }}>
@@ -97,7 +102,7 @@ export default function TarifsPage() {
           href="/"
           style={{
             fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase',
-            color: '#6B6B65', textDecoration: 'none',
+            color: '#9A9A94', textDecoration: 'none',
           }}
         >
           ← Retour au site
@@ -107,7 +112,7 @@ export default function TarifsPage() {
       {/* Contenu principal */}
       <main style={{
         minHeight: '100vh',
-        background: '#F2F2EE',
+        background: '#18181A',
         padding: '120px 60px 80px',
         fontFamily: "'DM Sans', sans-serif",
       }}>
@@ -127,14 +132,14 @@ export default function TarifsPage() {
               fontSize: 'clamp(36px, 4vw, 54px)',
               fontWeight: 300,
               lineHeight: 1.1,
-              color: '#18181A',
+              color: '#FAFAF7',
               marginBottom: '16px',
             }}>
               Des tarifs <em style={{ fontStyle: 'italic', color: '#C9A96E' }}>transparents</em>
             </h1>
             <p style={{
               fontSize: '15px',
-              color: '#6B6B65',
+              color: '#9A9A94',
               maxWidth: '500px',
               margin: '0 auto',
               lineHeight: 1.7,
@@ -148,14 +153,14 @@ export default function TarifsPage() {
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: '1px',
-            background: '#E8E8E4',
+            background: '#333336',
             marginBottom: '48px',
           }}>
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
                 style={{
-                  background: plan.founder ? '#0E0E10' : plan.featured ? '#FAFAF7' : '#FAFAF7',
+                  background: plan.founder ? '#0E0E10' : plan.featured ? '#222224' : '#1E1E20',
                   padding: '40px 32px',
                   position: 'relative',
                   height: '100%',
@@ -168,8 +173,8 @@ export default function TarifsPage() {
                     fontSize: '9px',
                     letterSpacing: '0.16em',
                     textTransform: 'uppercase',
-                    color: plan.founder ? '#C9A96E' : '#6B6B65',
-                    border: `1px solid ${plan.founder ? 'rgba(201,169,110,0.3)' : '#E8E8E4'}`,
+                    color: plan.founder ? '#C9A96E' : '#9A9A94',
+                    border: `1px solid ${plan.founder ? 'rgba(201,169,110,0.3)' : '#333336'}`,
                     padding: '4px 10px',
                     display: 'inline-block',
                     marginBottom: '16px',
@@ -182,7 +187,7 @@ export default function TarifsPage() {
                   fontSize: '12px',
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
-                  color: plan.featured ? '#C9A96E' : '#6B6B65',
+                  color: plan.featured ? '#C9A96E' : '#9A9A94',
                   marginBottom: '16px',
                 }}>
                   {plan.name}
@@ -192,7 +197,7 @@ export default function TarifsPage() {
                   fontSize: '56px',
                   fontWeight: 300,
                   lineHeight: 1,
-                  color: plan.founder ? '#FAFAF7' : '#18181A',
+                  color: plan.founder ? '#FAFAF7' : '#FAFAF7',
                   marginBottom: '4px',
                 }}>
                   <sup style={{ fontSize: '20px', verticalAlign: 'super' }}>€</sup>
@@ -200,7 +205,7 @@ export default function TarifsPage() {
                 </div>
                 <div style={{
                   fontSize: '12px',
-                  color: '#6B6B65',
+                  color: '#9A9A94',
                   marginBottom: '28px',
                 }}>
                   {plan.unit}
@@ -222,7 +227,7 @@ export default function TarifsPage() {
                         style={{
                           fontSize: '13px',
                           lineHeight: 1.5,
-                          color: plan.founder ? '#888' : '#6B6B65',
+                          color: plan.founder ? '#888' : '#9A9A94',
                           display: 'flex',
                           alignItems: 'flex-start',
                           gap: '8px',
@@ -242,8 +247,8 @@ export default function TarifsPage() {
                     display: 'block',
                     textAlign: 'center',
                     padding: '12px 20px',
-                    border: `1px solid ${plan.founder ? 'rgba(201,169,110,0.4)' : '#E8E8E4'}`,
-                    color: plan.founder ? '#C9A96E' : '#6B6B65',
+                    border: `1px solid ${plan.founder ? 'rgba(201,169,110,0.4)' : '#333336'}`,
+                    color: plan.founder ? '#C9A96E' : '#9A9A94',
                     fontSize: '11px',
                     letterSpacing: '0.16em',
                     textTransform: 'uppercase',
@@ -275,10 +280,10 @@ export default function TarifsPage() {
         @media (max-width: 900px) {
           nav { padding: 16px 24px !important; }
           main { padding: 100px 24px 60px !important; }
-          .pricing-grid { grid-template-columns: 1fr !important; max-width: 420px; margin: 0 auto; }
+          main > div > div:last-child { grid-template-columns: 1fr !important; max-width: 420px; margin: 0 auto; }
         }
         @media (min-width: 600px) and (max-width: 900px) {
-          .pricing-grid { grid-template-columns: repeat(2, 1fr) !important; max-width: 660px; }
+          main > div > div:last-child { grid-template-columns: repeat(2, 1fr) !important; max-width: 660px; }
         }
       `}</style>
     </>
