@@ -3,75 +3,62 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-// ✅ ISR : Revalidation toutes les heures (3600 secondes)
-'use client'
-
-import Link from 'next/link'
-import { useState } from 'react'
-
-// ❌ PAS de revalidate ici (composant client)
-// export const revalidate = 3600  ← À SUPPRIMER
-
-const FAQS = [
-  // ...
-
 const FAQS = [
   {
-    q: "En quoi Redac-Immo est-il diff\u00e9rent d\u2019un r\u00e9dacteur humain\u00a0?",
-    a: "Redac-Immo g\u00e9n\u00e8re des annonces en quelques secondes pour 5\u20ac au lieu de 50 \u00e0 150\u20ac chez un r\u00e9dacteur freelance. La qualit\u00e9 est calibr\u00e9e sur les standards des grandes agences \u2014 Sotheby\u2019s, Barnes, Engel & V\u00f6lkers \u2014 sans les superlatifs vides. Vous obtenez un texte structur\u00e9, pr\u00e9cis et professionnel, pr\u00eat \u00e0 publier.",
+    q: "En quoi Redac-Immo est-il différent d'un rédacteur humain ?",
+    a: "Redac-Immo génère des annonces en quelques secondes pour 5€ au lieu de 50 à 150€ chez un rédacteur freelance. La qualité est calibrée sur les standards des grandes agences — Sotheby's, Barnes, Engel & Völkers — sans les superlatifs vides. Vous obtenez un texte structuré, précis et professionnel, prêt à publier.",
   },
   {
-    q: "Puis-je modifier l\u2019annonce apr\u00e8s g\u00e9n\u00e9ration\u00a0?",
-    a: "Oui, bien s\u00fbr. Le texte g\u00e9n\u00e9r\u00e9 est enti\u00e8rement modifiable. Vous pouvez copier, coller et ajuster selon vos pr\u00e9f\u00e9rences avant publication. L\u2019annonce vous appartient \u2014 aucune restriction d\u2019usage.",
+    q: "Puis-je modifier l'annonce après génération ?",
+    a: "Oui, bien sûr. Le texte généré est entièrement modifiable. Vous pouvez copier, coller et ajuster selon vos préférences avant publication. L'annonce vous appartient — aucune restriction d'usage.",
   },
   {
-    q: "La version anglaise est-elle une traduction ou une r\u00e9daction originale\u00a0?",
-    a: "C\u2019est une r\u00e9daction originale adapt\u00e9e au march\u00e9 anglophone \u2014 pas une traduction litt\u00e9rale. Le ton et les arguments sont ajust\u00e9s pour s\u00e9duire un acheteur britannique ou international, avec les rep\u00e8res culturels appropri\u00e9s.",
+    q: "La version anglaise est-elle une traduction ou une rédaction originale ?",
+    a: "C'est une rédaction originale adaptée au marché anglophone — pas une traduction littérale. Le ton et les arguments sont ajustés pour séduire un acheteur britannique ou international, avec les repères culturels appropriés.",
   },
   {
-    q: "Mes donn\u00e9es sont-elles confidentielles\u00a0?",
-    a: "Oui. Redac-Immo est conforme au RGPD. Les informations que vous saisissez sont utilis\u00e9es uniquement pour g\u00e9n\u00e9rer votre annonce et ne sont jamais revendues ni transmises \u00e0 des tiers. Vos donn\u00e9es sont stock\u00e9es de mani\u00e8re s\u00e9curis\u00e9e et chiffr\u00e9es.",
+    q: "Mes données sont-elles confidentielles ?",
+    a: "Oui. Redac-Immo est conforme au RGPD. Les informations que vous saisissez sont utilisées uniquement pour générer votre annonce et ne sont jamais revendues ni transmises à des tiers. Vos données sont stockées de manière sécurisée et chiffrées.",
   },
   {
-    q: "Fonctionne-t-il pour tous les types de biens\u00a0?",
-    a: "Appartements, maisons, villas, ch\u00e2teaux, terrains constructibles, locaux commerciaux \u2014 Redac-Immo adapte le style et la structure selon le type de bien et la gamme de prix. Chaque annonce est calibr\u00e9e pour son march\u00e9 cible.",
+    q: "Fonctionne-t-il pour tous les types de biens ?",
+    a: "Appartements, maisons, villas, châteaux, terrains constructibles, locaux commerciaux — Redac-Immo adapte le style et la structure selon le type de bien et la gamme de prix. Chaque annonce est calibrée pour son marché cible.",
   },
   {
-    q: "Combien de temps faut-il pour obtenir mon annonce\u00a0?",
-    a: "La g\u00e9n\u00e9ration prend quelques secondes. Vous avez votre annonce imm\u00e9diatement dans votre dashboard. Le d\u00e9lai annonc\u00e9 de 24h est une garantie maximale \u2014 en pratique, c\u2019est instantan\u00e9.",
+    q: "Combien de temps faut-il pour obtenir mon annonce ?",
+    a: "La génération prend quelques secondes. Vous avez votre annonce immédiatement dans votre dashboard. Le délai annoncé de 24h est une garantie maximale — en pratique, c'est instantané.",
   },
   {
-    q: "Puis-je commander plusieurs annonces\u00a0?",
-    a: "Oui. Chaque commande g\u00e9n\u00e8re une annonce ind\u00e9pendante. Toutes vos annonces sont sauvegard\u00e9es dans votre dashboard et accessibles \u00e0 tout moment. L\u2019offre Agence permet un volume illimit\u00e9 \u00e0 tarif mensuel fixe.",
+    q: "Puis-je commander plusieurs annonces ?",
+    a: "Oui. Chaque commande génère une annonce indépendante. Toutes vos annonces sont sauvegardées dans votre dashboard et accessibles à tout moment. L'offre Agence permet un volume illimité à tarif mensuel fixe.",
   },
   {
-    q: "Comment fonctionne l\u2019offre Agence\u00a0?",
-    a: "L\u2019offre Agence \u00e0 65\u20ac/mois donne acc\u00e8s \u00e0 un volume illimit\u00e9 d\u2019annonces, avec les versions fran\u00e7aise, anglaise et r\u00e9seaux sociaux incluses. Sans engagement, r\u00e9siliable \u00e0 tout moment. 3 annonces offertes \u00e0 l\u2019activation pour tester le service.",
+    q: "Comment fonctionne l'offre Agence ?",
+    a: "L'offre Agence à 65€/mois donne accès à un volume illimité d'annonces, avec les versions française, anglaise et réseaux sociaux incluses. Sans engagement, résiliable à tout moment. 3 annonces offertes à l'activation pour tester le service.",
   },
   {
-    q: "Dois-je cr\u00e9er un compte pour commander\u00a0?",
-    a: "Oui, un compte est n\u00e9cessaire pour acc\u00e9der \u00e0 l\u2019interface de g\u00e9n\u00e9ration et retrouver vos annonces. La cr\u00e9ation de compte est gratuite et prend moins de 2 minutes.",
+    q: "Dois-je créer un compte pour commander ?",
+    a: "Oui, un compte est nécessaire pour accéder à l'interface de génération et retrouver vos annonces. La création de compte est gratuite et prend moins de 2 minutes.",
   },
   {
-    q: "La version r\u00e9seaux sociaux est-elle incluse dans toutes les offres\u00a0?",
-    a: "Oui. Chaque annonce g\u00e9n\u00e9r\u00e9e inclut une version courte (280 caract\u00e8res max) adapt\u00e9e \u00e0 Instagram, Facebook et LinkedIn, quelle que soit la formule choisie.",
-  },
-  // ✅ Nouvelles questions
-  {
-    q: "Proposez-vous une p\u00e9riode d'essai gratuite ?",
-    a: "Nous n'avons pas d'essai gratuit automatique, mais nous offrons 3 annonces \u00e0 l'activation de la formule Agence. Pour tester la qualit\u00e9, vous pouvez commander une annonce Basique \u00e0 5\u20ac sans engagement.",
+    q: "La version réseaux sociaux est-elle incluse dans toutes les offres ?",
+    a: "Oui. Chaque annonce générée inclut une version courte (280 caractères max) adaptée à Instagram, Facebook et LinkedIn, quelle que soit la formule choisie.",
   },
   {
-    q: "Quels sont les d\u00e9lais de livraison r\u00e9els ?",
-    a: "La g\u00e9n\u00e9ration prend moins de 30 secondes. L'annonce est disponible imm\u00e9diatement dans votre espace client. Le d\u00e9lai de 24h est une garantie maximale en cas d'incident technique.",
+    q: "Proposez-vous une période d'essai gratuite ?",
+    a: "Nous n'avons pas d'essai gratuit automatique, mais nous offrons 3 annonces à l'activation de la formule Agence. Pour tester la qualité, vous pouvez commander une annonce Basique à 5€ sans engagement.",
+  },
+  {
+    q: "Quels sont les délais de livraison réels ?",
+    a: "La génération prend moins de 30 secondes. L'annonce est disponible immédiatement dans votre espace client. Le délai de 24h est une garantie maximale en cas d'incident technique.",
   },
   {
     q: "Puis-je utiliser les annonces sur tous les portails ?",
-    a: "Oui. Les annonces sont livr\u00e9es en texte brut, compatibles avec tous les portails : LeBonCoin, SeLoger, Bien'ici, PAP, Logic-immo, et les portails internationaux comme Rightmove ou Zoopla.",
+    a: "Oui. Les annonces sont livrées en texte brut, compatibles avec tous les portails : LeBonCoin, SeLoger, Bien'ici, PAP, Logic-immo, et les portails internationaux comme Rightmove ou Zoopla.",
   },
   {
-    q: "Comment sont calcul\u00e9s les 3 cr\u00e9dits de la formule Essentiel ?",
-    a: "Chaque g\u00e9n\u00e9ration d'annonce consomme 1 cr\u00e9dit. Vous pouvez g\u00e9n\u00e9rer 3 annonces compl\u00e8tes (FR + EN + r\u00e9seaux sociaux). Les cr\u00e9dits n'expirent pas et sont utilisables quand vous le souhaitez.",
+    q: "Comment sont calculés les 3 crédits de la formule Essentiel ?",
+    a: "Chaque génération d'annonce consomme 1 crédit. Vous pouvez générer 3 annonces complètes (FR + EN + réseaux sociaux). Les crédits n'expirent pas et sont utilisables quand vous le souhaitez.",
   },
 ]
 
