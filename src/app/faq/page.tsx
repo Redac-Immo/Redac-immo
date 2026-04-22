@@ -4,7 +4,16 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 // ✅ ISR : Revalidation toutes les heures (3600 secondes)
-export const revalidate = 3600
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+
+// ❌ PAS de revalidate ici (composant client)
+// export const revalidate = 3600  ← À SUPPRIMER
+
+const FAQS = [
+  // ...
 
 const FAQS = [
   {
