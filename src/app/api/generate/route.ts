@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import type { GenerateRequest, GenerateResponse } from '@/types'
 import { resend } from '@/lib/resend/client'
 import { templateConfirmationAnnonce } from '@/lib/resend/templates/confirmation-annonce'
+import { rateLimit } from '@/lib/rate-limit'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -167,6 +168,25 @@ export async function POST(request: NextRequest) {
     }
 
     const service = createServiceClient()
+
+    // ✅ RATE LIMITING — 5 requêtes par minute par utilisateur
+    const rateLimitResult = rateLimit(user.id, 5, 60)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Trop de requêtes. Veuillez patienter quelques instants.',
+          retryAfter: Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000),
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': '5',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rateLimitResult.resetAt.toISOString(),
+          }
+        }
+      )
+    }
 
     // ─── Vérification et décrément des crédits ────────────────
     // Les plans agence et fondateur ont des annonces illimitées.
