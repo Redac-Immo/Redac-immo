@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { href: '#methode',        label: 'Notre méthode' },
   { href: '#exemples',       label: 'Exemples' },
   { href: '#fonctionnalites',label: 'Fonctionnalités' },
-  { href: '/tarifs',         label: 'Tarifs' },  // ✅ Modifié : pointe vers la page dédiée
+  { href: '/tarifs',         label: 'Tarifs' },
   { href: '#faq',            label: 'FAQ' },
 ]
 
