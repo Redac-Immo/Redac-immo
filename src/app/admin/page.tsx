@@ -3,19 +3,24 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import AdminClient from './AdminClient'
 
-// ✅ Pagination : 20 clients par page
-const CLIENTS_PER_PAGE = 20
+// ✅ Pagination : 20 éléments par page
+const ITEMS_PER_PAGE = 20
 
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; annoncesPage?: string }>
 }) {
-  // ✅ Récupérer la page depuis l'URL (ex: /admin?page=2)
+  // ✅ Récupérer les pages depuis l'URL
   const params = await searchParams
-  const currentPage = Math.max(1, parseInt(params.page ?? '1'))
-  const start = (currentPage - 1) * CLIENTS_PER_PAGE
-  const end = start + CLIENTS_PER_PAGE - 1
+  const currentClientsPage = Math.max(1, parseInt(params.page ?? '1'))
+  const currentAnnoncesPage = Math.max(1, parseInt(params.annoncesPage ?? '1'))
+  
+  const clientsStart = (currentClientsPage - 1) * ITEMS_PER_PAGE
+  const clientsEnd = clientsStart + ITEMS_PER_PAGE - 1
+  
+  const annoncesStart = (currentAnnoncesPage - 1) * ITEMS_PER_PAGE
+  const annoncesEnd = annoncesStart + ITEMS_PER_PAGE - 1
 
   // ✅ UNE SEULE instanciation du service client
   const service = createServiceClient()
@@ -43,16 +48,16 @@ export default async function AdminPage({
     .select('*', { count: 'exact' })
     .eq('role', 'client')
     .order('created_at', { ascending: false })
-    .range(start, end)
+    .range(clientsStart, clientsEnd)
 
   // Récupérer les auth users correspondants
   const userIds = (profiles ?? []).map(p => p.id)
   const { data: { users: authUsers } } = await service.auth.admin.listUsers({
-    perPage: CLIENTS_PER_PAGE,
+    perPage: ITEMS_PER_PAGE,
   })
 
   // Récupération des annonces pour compter par client
-  const { data: annonces } = await service
+  const { data: clientAnnonces } = await service
     .from('annonces')
     .select('user_id')
     .in('user_id', userIds)
@@ -60,7 +65,7 @@ export default async function AdminPage({
   // Fusion profils + auth
   const clients = (profiles ?? []).map(profile => {
     const authUser = authUsers.find(u => u.id === profile.id)
-    const nbAnnonces = (annonces ?? []).filter(a => a.user_id === profile.id).length
+    const nbAnnonces = (clientAnnonces ?? []).filter(a => a.user_id === profile.id).length
     return {
       ...profile,
       email: authUser?.email ?? '',
@@ -69,10 +74,17 @@ export default async function AdminPage({
     }
   })
 
-  // Récupération de TOUTES les annonces pour les KPIs globaux
-  const { data: allAnnonces } = await service
+  // ✅ Récupération PAGINÉE des annonces
+  const { data: paginatedAnnonces, count: totalAnnonces } = await service
     .from('annonces')
-    .select('*')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(annoncesStart, annoncesEnd)
+
+  // Récupération de TOUTES les annonces pour les KPIs globaux (limité à 500)
+  const { data: allAnnoncesForKpi } = await service
+    .from('annonces')
+    .select('created_at, user_id')
     .order('created_at', { ascending: false })
     .limit(500)
 
@@ -94,29 +106,49 @@ export default async function AdminPage({
     .eq('role', 'client')
     .eq('blocked', true)
 
+  // ✅ Récupérer le MRR (Monthly Recurring Revenue)
+  const { data: activeSubscriptions } = await service
+    .from('profiles')
+    .select('plan')
+    .eq('role', 'client')
+    .eq('subscription_status', 'active')
+    .in('plan', ['agence', 'fondateur'])
+
+  const mrr = (activeSubscriptions ?? []).reduce((acc, p) => {
+    if (p.plan === 'agence') return acc + 65
+    if (p.plan === 'fondateur') return acc + 50
+    return acc
+  }, 0)
+
   // Calcul des KPIs
-  const totalPages = Math.ceil((totalClients ?? 0) / CLIENTS_PER_PAGE)
+  const totalClientsPages = Math.ceil((totalClients ?? 0) / ITEMS_PER_PAGE)
+  const totalAnnoncesPages = Math.ceil((totalAnnonces ?? 0) / ITEMS_PER_PAGE)
 
   const kpis = {
     totalClients: totalClients ?? 0,
     clientsActifs: totalActifs ?? 0,
     clientsBloqués: totalBloques ?? 0,
-    annoncesTotal: (allAnnonces ?? []).length,
-    announcesThisMonth: (allAnnonces ?? []).filter(a => a.created_at >= startOfMonth).length,
-    newClientsThisWeek: 0, // Sera calculé côté client ou via une autre requête si nécessaire
-    mrr: 0, // Sera calculé dans AdminClient
+    annoncesTotal: totalAnnonces ?? 0,
+    announcesThisMonth: (allAnnoncesForKpi ?? []).filter(a => a.created_at >= startOfMonth).length,
+    newClientsThisWeek: 0,
+    mrr,
   }
 
   return (
     <AdminClient
       adminProfile={adminProfile}
       clients={clients}
-      annonces={allAnnonces ?? []}
+      annonces={paginatedAnnonces ?? []}
       kpis={kpis}
       pagination={{
-        currentPage,
-        totalPages,
+        currentPage: currentClientsPage,
+        totalPages: totalClientsPages,
         totalClients: totalClients ?? 0,
+      }}
+      annoncesPagination={{
+        currentPage: currentAnnoncesPage,
+        totalPages: totalAnnoncesPages,
+        totalAnnonces: totalAnnonces ?? 0,
       }}
     />
   )
