@@ -164,7 +164,7 @@ export default function AppPage() {
   }
 
   // ✅ Déterminer si le bouton doit être désactivé
-  const isGenerateDisabled = loading || (credits && !credits.isUnlimited && credits.credits_remaining === 0)
+ const isGenerateDisabled = loading || (credits ? (!credits.isUnlimited && credits.credits_remaining === 0) : false)
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
