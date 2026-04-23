@@ -1,27 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
+  const service = createServiceClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Log pour debug
-  console.log('🔍 [DashboardPage] user.id:', user.id)
-
-  const { data: profile, error: profileError } = await supabase
+  // ✅ Utiliser le service role pour bypasser le RLS
+  const { data: profile } = await service
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
-
-  // Log pour debug
-  console.log('🔍 [DashboardPage] profile trouvé:', profile)
-  if (profileError) {
-    console.error('🔍 [DashboardPage] erreur profil:', profileError)
-  }
 
   const { data: annonces } = await supabase
     .from('annonces')
