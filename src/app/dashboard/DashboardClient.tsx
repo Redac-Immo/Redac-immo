@@ -96,7 +96,7 @@ export default function DashboardClient({ user, profile, annonces }: Props) {
           </div>
           <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: T.gold, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: T.gold, display: 'inline-block' }} />
-            Formule {profile?.plan ?? 'basique'}
+            {profile?.plan ? `Formule ${profile.plan}` : 'Aucune formule'}
           </div>
         </div>
 
@@ -404,23 +404,37 @@ function SectionAnnonces({ annonces, setAnnonces, showToast }: { annonces: Annon
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function SectionAbonnement({ profile, showToast }: { profile: Profile | null; showToast: (m: string, t?: string) => void }) {
-  const plan = profile?.plan ?? 'basique'
+  const plan = profile?.plan
   
   const getFeatures = () => {
     switch (plan) {
       case 'basique': return ['1 annonce', 'Version française', 'Version réseaux sociaux', 'Livraison sous 24h']
       case 'essentiel': return ['3 annonces', 'Version française + anglaise', 'Version réseaux sociaux', 'Export PDF', 'Livraison sous 24h']
-      case 'agence': case 'fondateur': return ['Annonces illimitées', 'Versions FR + EN + réseaux sociaux', 'Dashboard agence dédié', 'Support prioritaire']
-      default: return ['1 annonce', 'Version française', 'Version réseaux sociaux']
+      case 'agence': return ['Annonces illimitées', 'Versions FR + EN + réseaux sociaux', 'Dashboard agence dédié', 'Support prioritaire']
+      case 'fondateur': return ['Annonces illimitées', 'Versions FR + EN + réseaux sociaux', 'Dashboard agence dédié', 'Support prioritaire', 'Prix garanti à vie', 'Accès anticipé aux nouveautés']
+      default: return ['Aucune formule active', 'Visitez la section "Nouvelle commande"']
     }
   }
 
-  const getPrix = () => { switch (plan) { case 'basique': return '5€'; case 'essentiel': return '12€'; case 'agence': return '65€'; case 'fondateur': return '50€'; default: return '5€' } }
-  const getUnite = () => { switch (plan) { case 'agence': case 'fondateur': return '/ mois · sans engagement'; default: return plan === 'essentiel' ? '/ 3 annonces' : '/ annonce' } }
+  const getPrix = () => { switch (plan) { case 'basique': return '5€'; case 'essentiel': return '12€'; case 'agence': return '65€'; case 'fondateur': return '50€'; default: return '—' } }
+  const getUnite = () => { switch (plan) { case 'agence': return '/ mois · sans engagement'; case 'fondateur': return '/ mois · à vie'; default: return plan === 'essentiel' ? '/ 3 annonces' : plan === 'basique' ? '/ annonce' : '' } }
 
   const features = getFeatures()
   const prix = getPrix()
   const unite = getUnite()
+
+  if (!plan) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <SectionHeader title="Mon" accent="abonnement" sub="Gestion de votre formule et renouvellement" />
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '48px', textAlign: 'center', color: T.mid }}>
+          <div style={{ fontSize: '24px', marginBottom: '12px' }}>📋</div>
+          <div style={{ fontSize: '14px', marginBottom: '8px' }}>Aucune formule active</div>
+          <div style={{ fontSize: '12px' }}>Rendez-vous dans "Nouvelle commande" pour choisir une formule.</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -465,10 +479,12 @@ function SectionAbonnement({ profile, showToast }: { profile: Profile | null; sh
       {plan !== 'agence' && plan !== 'fondateur' && (
         <div style={{ border: '1px solid rgba(201,169,110,0.25)', background: 'rgba(201,169,110,0.06)', padding: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: T.gold }}>Passer à la formule Agence</div>
-            <div style={{ fontSize: '12px', color: T.mid, maxWidth: '460px', lineHeight: 1.6 }}>Annonces illimitées + FR/EN + réseaux sociaux pour 65€/mois sans engagement.</div>
+            <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: T.gold }}>Passer à une formule supérieure</div>
+            <div style={{ fontSize: '12px', color: T.mid, maxWidth: '460px', lineHeight: 1.6 }}>
+              Découvrez nos formules Agence (65€/mois) et Fondateur (50€/mois à vie) pour des annonces illimitées.
+            </div>
           </div>
-          <button onClick={() => window.location.href = '/dashboard?section=commande'} style={{ padding: '7px 16px', background: T.gold, border: 'none', color: T.bg, fontFamily: "'DM Sans', sans-serif", fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>Passer à Agence — 65€/mois</button>
+          <button onClick={() => window.location.href = '/dashboard?section=commande'} style={{ padding: '7px 16px', background: T.gold, border: 'none', color: T.bg, fontFamily: "'DM Sans', sans-serif", fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>Voir les offres</button>
         </div>
       )}
     </div>
@@ -487,6 +503,7 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
     { id: 'basique', name: 'Basique', price: '5€', unit: '/ annonce', features: ['Version française', 'Version réseaux sociaux', 'Liens de partage'] },
     { id: 'essentiel', name: 'Essentiel', price: '12€', unit: '/ 3 annonces', features: ['Version FR + EN', 'Version réseaux sociaux', 'Export PDF', 'Liens de partage'], recommended: true },
     { id: 'agence', name: 'Agence', price: '65€', unit: '/ mois', features: ['Annonces illimitées', 'FR + EN + réseaux', 'Dashboard dédié', 'Support prioritaire'] },
+    { id: 'fondateur', name: 'Fondateur', price: '50€', unit: '/ mois · à vie', features: ['Annonces illimitées', 'Prix garanti à vie', 'Accès anticipé', 'Support prioritaire'], founder: true },
   ]
 
   return (
@@ -495,26 +512,30 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
 
       <div style={{ background: T.surface, border: `1px solid ${T.border}` }}>
         <div style={{ padding: '16px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.mid }}>Votre formule active</span>
-          <Badge type="gold">{profile?.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) : 'Basique'} · {profile?.plan === 'agence' ? '65€/mois' : profile?.plan === 'essentiel' ? '12€' : '5€'}</Badge>
+          <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.mid }}>
+            {profile?.plan ? 'Votre formule active' : 'Aucune formule active'}
+          </span>
+          <Badge type="gold">{profile?.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) : 'Aucune'}</Badge>
         </div>
         <div style={{ padding: '20px 24px', fontSize: '13px', color: T.mid, lineHeight: 1.7 }}>
-          Vous êtes sur la <strong style={{ color: T.dark }}>Formule {profile?.plan ?? 'Basique'}</strong>.
-          {profile?.plan === 'agence' || profile?.plan === 'fondateur' ? ' Vos annonces sont incluses dans votre abonnement.' : ' Vous pouvez générer des annonces avec vos crédits disponibles.'}
+          {profile?.plan 
+            ? <>Vous êtes sur la <strong style={{ color: T.dark }}>Formule {profile.plan}</strong>. {profile.plan === 'agence' || profile.plan === 'fondateur' ? 'Vos annonces sont incluses dans votre abonnement.' : 'Vous pouvez générer des annonces avec vos crédits disponibles.'}</>
+            : <>Vous n'avez pas encore de formule. <strong style={{ color: T.dark }}>Choisissez-en une ci-dessous</strong> pour commencer à générer des annonces.</>
+          }
         </div>
       </div>
 
       <div>
         <div style={{ fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: T.mid, marginBottom: '16px' }}>
-          {profile?.plan === 'agence' || profile?.plan === 'fondateur' ? 'Changer de formule' : 'Commander des crédits'}
+          {profile?.plan === 'agence' || profile?.plan === 'fondateur' ? 'Changer de formule' : profile?.plan ? 'Commander des crédits supplémentaires' : 'Choisir une formule'}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: T.border }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: T.border }}>
           {plans.map(plan => (
             <div
               key={plan.id}
               onClick={() => setSelectedPlan(plan.id)}
               style={{
-                background: selectedPlan === plan.id ? 'rgba(201,169,110,0.1)' : T.surface,
+                background: selectedPlan === plan.id ? 'rgba(201,169,110,0.1)' : plan.founder ? '#0E0E10' : T.surface,
                 padding: '28px 24px', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', gap: '10px',
                 border: `2px solid ${selectedPlan === plan.id ? T.gold : 'transparent'}`,
@@ -524,17 +545,20 @@ function SectionCommande({ profile }: { profile: Profile | null }) {
               {plan.recommended && (
                 <div style={{ position: 'absolute', top: '-1px', right: '-1px', background: T.gold, color: T.bg, fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', padding: '4px 10px', fontWeight: 500 }}>Populaire</div>
               )}
+              {plan.founder && (
+                <div style={{ position: 'absolute', top: '-1px', right: '-1px', background: '#C9A96E', color: '#18181A', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', padding: '4px 10px', fontWeight: 500 }}>Offre limitée</div>
+              )}
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 400, color: T.dark }}>{plan.name}</div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: 300, color: T.gold }}>{plan.price} <span style={{ fontSize: '12px', fontFamily: "'DM Sans', sans-serif", color: T.mid }}>{plan.unit}</span></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '4px', flex: 1 }}>
                 {plan.features.map(f => (
-                  <div key={f} style={{ fontSize: '12px', color: T.mid, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <div key={f} style={{ fontSize: '12px', color: plan.founder ? '#9A9A94' : T.mid, display: 'flex', alignItems: 'center', gap: '7px' }}>
                     <span style={{ color: T.gold, fontSize: '10px' }}>—</span>{f}
                   </div>
                 ))}
               </div>
               <button
-                onClick={(e) => { e.stopPropagation(); startCheckout(plan.id as 'basique' | 'essentiel' | 'agence') }}
+                onClick={(e) => { e.stopPropagation(); startCheckout(plan.id as 'basique' | 'essentiel' | 'agence' | 'fondateur') }}
                 disabled={loading === plan.id}
                 style={{ marginTop: '16px', padding: '10px 16px', background: loading === plan.id ? T.goldDim : T.gold, color: T.bg, border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: loading === plan.id ? 'not-allowed' : 'pointer', fontWeight: 500, width: '100%' }}
               >
