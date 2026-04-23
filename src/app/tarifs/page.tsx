@@ -1,20 +1,15 @@
+'use client'
+
 import Link from 'next/link'
-import type { Metadata } from 'next'
+import { useState } from 'react'
+import { useCheckout } from '@/hooks/useCheckout'
 
 // ✅ ISR : Revalidation toutes les heures (3600 secondes)
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: 'Tarifs — Redac-Immo',
-  description: 'Des tarifs transparents, à l\'annonce ou au forfait. À partir de 5€ par annonce, sans engagement.',
-  robots: 'index, follow',
-  alternates: {
-    canonical: 'https://redac-immo.fr/tarifs',
-  },
-}
-
 const PLANS = [
   {
+    id: 'basique',
     name: 'Basique',
     price: '5',
     unit: 'par annonce',
@@ -24,10 +19,9 @@ const PLANS = [
       'Liens publication directe',
       'Livraison sous 24h',
     ],
-    cta: 'Commander',
-    href: '/register',
   },
   {
+    id: 'essentiel',
     name: 'Essentiel',
     price: '12',
     unit: '3 annonces',
@@ -40,10 +34,9 @@ const PLANS = [
       'Liens publication directe',
       'Livraison sous 24h',
     ],
-    cta: 'Commander',
-    href: '/register',
   },
   {
+    id: 'agence',
     name: 'Agence',
     price: '65',
     unit: '/ mois · sans engagement',
@@ -56,10 +49,9 @@ const PLANS = [
       '3 annonces offertes à l\'activation',
       'Résiliable à tout moment',
     ],
-    cta: 'Commander',
-    href: '/register',
   },
   {
+    id: 'fondateur',
     name: 'Agence · Fondateur',
     price: '50',
     unit: '/ mois · à vie · 10 places',
@@ -71,12 +63,13 @@ const PLANS = [
       'Accès prioritaire aux nouvelles fonctionnalités',
       'Réservé aux 10 premiers abonnés',
     ],
-    cta: 'Commander',
-    href: '/register',
   },
 ]
 
 export default function TarifsPage() {
+  const { startCheckout, loading } = useCheckout()
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+
   return (
     <>
       <style>{`
@@ -161,7 +154,8 @@ export default function TarifsPage() {
           }}>
             {PLANS.map((plan) => (
               <div
-                key={plan.name}
+                key={plan.id}
+                onClick={() => setSelectedPlan(plan.id)}
                 style={{
                   background: plan.founder ? '#0E0E10' : plan.featured ? '#222224' : '#1E1E20',
                   padding: '40px 32px',
@@ -169,6 +163,9 @@ export default function TarifsPage() {
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
+                  border: `2px solid ${selectedPlan === plan.id ? '#C9A96E' : 'transparent'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
                 }}
               >
                 {plan.badge && (
@@ -244,23 +241,31 @@ export default function TarifsPage() {
                     )
                   })}
                 </ul>
-                <Link
-                  href={plan.href}
+                <button
+                  onClick={(e) => { 
+                    e.stopPropagation()
+                    startCheckout(plan.id as 'basique' | 'essentiel' | 'agence' | 'fondateur') 
+                  }}
+                  disabled={loading === plan.id}
                   style={{
                     display: 'block',
                     textAlign: 'center',
                     padding: '12px 20px',
-                    border: `1px solid ${plan.founder ? 'rgba(201,169,110,0.4)' : '#333336'}`,
-                    color: plan.founder ? '#C9A96E' : '#9A9A94',
+                    background: loading === plan.id ? '#9A7A48' : '#C9A96E',
+                    color: '#18181A',
+                    border: 'none',
                     fontSize: '11px',
                     letterSpacing: '0.16em',
                     textTransform: 'uppercase',
                     textDecoration: 'none',
                     transition: 'all 0.2s',
+                    cursor: loading === plan.id ? 'not-allowed' : 'pointer',
+                    fontWeight: 500,
+                    width: '100%',
                   }}
                 >
-                  {plan.cta}
-                </Link>
+                  {loading === plan.id ? 'Redirection…' : 'Commander'}
+                </button>
               </div>
             ))}
           </div>
