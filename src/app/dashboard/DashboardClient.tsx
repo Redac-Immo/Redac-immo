@@ -26,6 +26,7 @@ const SECTION_TITLES: Record<Section, string> = {
 }
 
 export default function DashboardClient({ user, profile, annonces }: Props) {
+  console.log('🔍 [DashboardClient] profile reçu:', profile)
   const [activeSection, setActiveSection] = useState<Section>('compte')
   const [toast, setToast] = useState<{ msg: string; type?: string } | null>(null)
   const [localAnnonces, setLocalAnnonces] = useState<Annonce[]>(annonces)
