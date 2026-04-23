@@ -21,6 +21,9 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
+  // ✅ Log APRÈS la définition de profile
+  console.log('🔍 [DashboardPage] profile:', profile)
+
   return (
     <DashboardClient
       user={user}
