@@ -35,47 +35,62 @@ export default function AppPage() {
   const [toast, setToast] = useState<string | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 
-  // ✅ Nouveaux states
+  // États pour les images et les crédits
   const [images, setImages] = useState<string[]>([])
   const [credits, setCredits] = useState<UserCredits | null>(null)
   const [profile, setProfile] = useState<{ plan: Formule } | null>(null)
+  const [creditsLoading, setCreditsLoading] = useState(true)
 
-  // ✅ Charger le profil et les crédits au montage
+  // Charger le profil et les crédits au montage
   useEffect(() => {
     async function loadUserData() {
+      setCreditsLoading(true)
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      
+      console.log('🔍 [AppPage] User:', user?.email)
+      
+      if (!user) {
+        setCreditsLoading(false)
+        return
+      }
 
       // Récupérer le profil
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('plan')
         .eq('id', user.id)
         .single()
 
+      console.log('🔍 [AppPage] Profile:', profileData, profileError)
+
       if (profileData) {
         setProfile(profileData)
-        setFormule(profileData.plan) // ✅ Définir la formule active
+        setFormule(profileData.plan)
       }
 
       // Récupérer les crédits
-      const { data: creditsData } = await supabase
+      const { data: creditsData, error: creditsError } = await supabase
         .from('annonce_credits')
         .select('credits_remaining, plan')
         .eq('user_id', user.id)
         .gt('credits_remaining', 0)
         .order('created_at', { ascending: false })
-        .limit(1)
+
+      console.log('🔍 [AppPage] Credits data:', creditsData, creditsError)
 
       const totalCredits = creditsData?.reduce((sum, c) => sum + c.credits_remaining, 0) || 0
       const isUnlimited = profileData?.plan === 'agence' || profileData?.plan === 'fondateur'
+
+      console.log('🔍 [AppPage] Calculated:', { totalCredits, isUnlimited, plan: profileData?.plan })
 
       setCredits({
         credits_remaining: totalCredits,
         plan: profileData?.plan || 'basique',
         isUnlimited,
       })
+      
+      setCreditsLoading(false)
     }
 
     loadUserData()
@@ -96,7 +111,6 @@ export default function AppPage() {
       return
     }
 
-    // ✅ Vérifier les crédits avant génération
     if (credits && !credits.isUnlimited && credits.credits_remaining === 0) {
       showToast('Aucun crédit disponible. Veuillez recharger.')
       return
@@ -118,7 +132,7 @@ export default function AppPage() {
       setResult({ fr: data.fr, en: data.en, short: data.short, bien: `${form.type} — ${form.localisation}`, prix: form.prix })
       setActiveTab('fr')
 
-      // ✅ Mettre à jour les crédits après génération
+      // Mettre à jour les crédits après génération
       if (credits && !credits.isUnlimited) {
         setCredits({
           ...credits,
@@ -163,8 +177,10 @@ export default function AppPage() {
     color: T.gold, marginBottom: '8px', display: 'block',
   }
 
-  // ✅ Déterminer si le bouton doit être désactivé
- const isGenerateDisabled = loading || (credits ? (!credits.isUnlimited && credits.credits_remaining === 0) : false)
+  const isGenerateDisabled = loading || (credits ? (!credits.isUnlimited && credits.credits_remaining === 0) : false)
+
+  // Afficher un loader pendant le chargement des crédits
+  const showCreditsBlock = !creditsLoading && profile && credits
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
@@ -179,8 +195,22 @@ export default function AppPage() {
           <Link href="/dashboard" style={{ fontSize: '11px', color: T.mid, textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</Link>
         </div>
 
-        {/* ✅ Formule actuelle + Crédits */}
-        {profile && credits && (
+        {/* ✅ Bloc Formule actuelle + Crédits */}
+        {creditsLoading && (
+          <div style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            padding: '16px',
+            borderRadius: '4px',
+            textAlign: 'center',
+            color: T.mid,
+            fontSize: '12px',
+          }}>
+            Chargement des crédits...
+          </div>
+        )}
+
+        {showCreditsBlock && (
           <div style={{
             background: T.surface,
             border: `1px solid ${T.border}`,
@@ -343,7 +373,7 @@ export default function AppPage() {
               <span style={{ width: '12px', height: '12px', border: '2px solid rgba(24,24,26,0.3)', borderTopColor: T.bg, borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
               Génération…
             </>
-          ) : 'Générer l\'annonce'}
+          ) : credits && !credits.isUnlimited && credits.credits_remaining === 0 ? 'Aucun crédit' : 'Générer l\'annonce'}
         </button>
 
       </aside>
