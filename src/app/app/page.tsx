@@ -39,21 +39,16 @@ export default function AppPage() {
   const [images, setImages] = useState<string[]>([])
   const [credits, setCredits] = useState<UserCredits | null>(null)
   const [profile, setProfile] = useState<{ plan: Formule } | null>(null)
-  const [creditsLoading, setCreditsLoading] = useState(true)
 
   // Charger le profil et les crédits au montage
   useEffect(() => {
     async function loadUserData() {
-      setCreditsLoading(true)
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
       console.log('🔍 [AppPage] User:', user?.email)
       
-      if (!user) {
-        setCreditsLoading(false)
-        return
-      }
+      if (!user) return
 
       // Récupérer le profil
       const { data: profileData, error: profileError } = await supabase
@@ -89,8 +84,6 @@ export default function AppPage() {
         plan: profileData?.plan || 'basique',
         isUnlimited,
       })
-      
-      setCreditsLoading(false)
     }
 
     loadUserData()
@@ -150,7 +143,7 @@ export default function AppPage() {
 
   function copyText(text: string) {
     navigator.clipboard.writeText(text)
-    showToast('✓ Texte copié')
+    showToast('Texte copié')
   }
 
   function downloadTxt() {
@@ -179,9 +172,6 @@ export default function AppPage() {
 
   const isGenerateDisabled = loading || (credits ? (!credits.isUnlimited && credits.credits_remaining === 0) : false)
 
-  // Afficher un loader pendant le chargement des crédits
-  const showCreditsBlock = !creditsLoading && profile && credits
-
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
 
@@ -195,74 +185,58 @@ export default function AppPage() {
           <Link href="/dashboard" style={{ fontSize: '11px', color: T.mid, textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</Link>
         </div>
 
-        {/* ✅ Bloc Formule actuelle + Crédits */}
-        {creditsLoading && (
-          <div style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            padding: '16px',
-            borderRadius: '4px',
-            textAlign: 'center',
-            color: T.mid,
-            fontSize: '12px',
-          }}>
-            Chargement des crédits...
+        {/* ✅ Bloc Formule actuelle + Crédits - VISIBLE EN PERMANENCE */}
+        <div style={{
+          background: T.surface,
+          border: `2px solid ${T.gold}`,
+          padding: '16px',
+          borderRadius: '4px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Formule actuelle
+            </span>
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: T.gold,
+              textTransform: 'uppercase',
+            }}>
+              {profile?.plan || 'Chargement...'}
+            </span>
           </div>
-        )}
-
-        {showCreditsBlock && (
-          <div style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            padding: '16px',
-            borderRadius: '4px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                Formule actuelle
-              </span>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: 500,
-                color: T.gold,
-                textTransform: 'uppercase',
-              }}>
-                {profile.plan}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                Crédits
-              </span>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: credits.isUnlimited ? T.ok : T.dark,
-              }}>
-                {credits.isUnlimited ? 'Illimités' : credits.credits_remaining}
-              </span>
-            </div>
-            <Link
-              href="/dashboard?section=commande"
-              style={{
-                display: 'block',
-                marginTop: '12px',
-                padding: '8px 12px',
-                background: 'transparent',
-                border: `1px solid ${T.border}`,
-                color: T.gold,
-                fontSize: '11px',
-                textAlign: 'center',
-                textDecoration: 'none',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                transition: 'all 0.2s',
-              }}
-            >
-              Changer de formule
-            </Link>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Crédits
+            </span>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: credits?.isUnlimited ? T.ok : T.dark,
+            }}>
+              {credits?.isUnlimited ? 'Illimités' : credits?.credits_remaining ?? '—'}
+            </span>
           </div>
-        )}
+          <Link
+            href="/dashboard?section=commande"
+            style={{
+              display: 'block',
+              marginTop: '12px',
+              padding: '8px 12px',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: T.gold,
+              fontSize: '11px',
+              textAlign: 'center',
+              textDecoration: 'none',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              transition: 'all 0.2s',
+            }}
+          >
+            Changer de formule
+          </Link>
+        </div>
 
         {/* ✅ Rédacteur (ex-Persona) */}
         <div>

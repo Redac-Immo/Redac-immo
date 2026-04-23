@@ -11,7 +11,7 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>()
 
-// Nettoyage automatique des entrées expirées toutes les 5 minutes
+// Nettoyage automati8que des entrées expirées toutes les 5 minutes
 setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of store.entries()) {
@@ -49,7 +49,7 @@ export function rateLimit(
     }
   }
 
-  // Limite dépassée
+  // Limite dépassée8
   if (entry.count >= maxRequests) {
     return {
       success: false,
