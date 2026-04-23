@@ -232,13 +232,24 @@ export async function POST(request: NextRequest) {
 
     // ─── Génération de l'annonce ──────────────────────────────
 
-    const { systemPrompt, userPrompt } = buildPrompt(body)
+    const { systemPrompt, userPrompt, imageContents } = buildPrompt({
+      ...body,
+      images: body.images,
+    })
+
+    // Construire le contenu du message (texte + images)
+    const messageContent: any[] = [{ type: 'text', text: userPrompt }]
+    
+    // Ajouter les images si présentes
+    if (imageContents && imageContents.length > 0) {
+      messageContent.push(...imageContents)
+    }
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 2000, // ✅ Augmenté pour l'analyse d'images
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [{ role: 'user', content: messageContent }],
     })
 
     const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
@@ -304,11 +315,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── PROMPT BUILDER ───────────────────────────────────────────
+// ─── PROMPT BUILDER (AVEC SUPPORT IMAGES) ─────────────────────
 
-function buildPrompt(d: GenerateRequest & { persona?: string }): {
+function buildPrompt(d: GenerateRequest & { persona?: string; images?: string[] }): {
   systemPrompt: string
   userPrompt: string
+  imageContents?: Array<{ type: 'image'; source: { type: 'base64'; media_type: string; data: string } }>
 } {
   const persona = PERSONAS[d.persona ?? ''] ?? PERSONA_DEFAULT
 
@@ -329,9 +341,14 @@ function buildPrompt(d: GenerateRequest & { persona?: string }): {
 - Points forts : ${d.pointsForts || 'n/a'}
 - Informations complémentaires : ${d.infoCompl || 'aucune'}`.trim()
 
+  // ✅ Instructions pour l'analyse des photos
+  const imageInstructions = d.images && d.images.length > 0
+    ? '\n\nDes photos du bien sont fournies. Analyse-les pour enrichir ta description : mentionne les matériaux visibles (parquet, carrelage, pierre, etc.), la luminosité, les volumes, la vue depuis les fenêtres, l\'état général, les éléments remarquables (cheminée, poutres apparentes, terrasse, jardin, etc.). Sois précis et factuel. N\'invente rien que tu ne vois pas sur les photos.'
+    : ''
+
   const systemPrompt = `${persona.system}
 
-${outputInstructions}
+${outputInstructions}${imageInstructions}
 
 Tu réponds UNIQUEMENT avec un JSON valide, sans markdown, sans backticks :
 {
@@ -342,9 +359,26 @@ Tu réponds UNIQUEMENT avec un JSON valide, sans markdown, sans backticks :
 
   const userPrompt = `${fewShot}
 
-${propertyDetails}`
+${propertyDetails}${d.images && d.images.length > 0 ? '\n\nAnalyse les photos ci-jointes pour enrichir l\'annonce.' : ''}`
 
-  return { systemPrompt, userPrompt }
+  // ✅ Construire le contenu pour Claude (avec images si présentes)
+  const imageContents = d.images?.map(img => {
+    // Extraire le type MIME et les données base64
+    const matches = img.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/)
+    if (matches) {
+      return {
+        type: 'image' as const,
+        source: {
+          type: 'base64' as const,
+          media_type: matches[1],
+          data: matches[2],
+        },
+      }
+    }
+    return null
+  }).filter(Boolean) as Array<{ type: 'image'; source: { type: 'base64'; media_type: string; data: string } }>
+
+  return { systemPrompt, userPrompt, imageContents }
 }
 
 // ─── PARSER ───────────────────────────────────────────────────

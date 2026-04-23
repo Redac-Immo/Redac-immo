@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import type { Formule, GenerateResponse } from '@/types'
+import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import type { Formule, GenerateResponse, UserCredits } from '@/types'
+import ImageUploader from '@/components/ImageUploader'
+import { T } from '@/lib/design-tokens'
 
 type FormData = {
   type: string
@@ -31,6 +35,52 @@ export default function AppPage() {
   const [toast, setToast] = useState<string | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 
+  // ✅ Nouveaux states
+  const [images, setImages] = useState<string[]>([])
+  const [credits, setCredits] = useState<UserCredits | null>(null)
+  const [profile, setProfile] = useState<{ plan: Formule } | null>(null)
+
+  // ✅ Charger le profil et les crédits au montage
+  useEffect(() => {
+    async function loadUserData() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Récupérer le profil
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', user.id)
+        .single()
+
+      if (profileData) {
+        setProfile(profileData)
+        setFormule(profileData.plan) // ✅ Définir la formule active
+      }
+
+      // Récupérer les crédits
+      const { data: creditsData } = await supabase
+        .from('annonce_credits')
+        .select('credits_remaining, plan')
+        .eq('user_id', user.id)
+        .gt('credits_remaining', 0)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const totalCredits = creditsData?.reduce((sum, c) => sum + c.credits_remaining, 0) || 0
+      const isUnlimited = profileData?.plan === 'agence' || profileData?.plan === 'fondateur'
+
+      setCredits({
+        credits_remaining: totalCredits,
+        plan: profileData?.plan || 'basique',
+        isUnlimited,
+      })
+    }
+
+    loadUserData()
+  }, [])
+
   function update(field: keyof FormData, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
@@ -45,13 +95,20 @@ export default function AppPage() {
       showToast('Remplissez les champs obligatoires : surface, localisation, prix')
       return
     }
+
+    // ✅ Vérifier les crédits avant génération
+    if (credits && !credits.isUnlimited && credits.credits_remaining === 0) {
+      showToast('Aucun crédit disponible. Veuillez recharger.')
+      return
+    }
+
     setLoading(true)
     setResult(null)
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, formule, persona }),
+        body: JSON.stringify({ ...form, formule, persona, images }),
       })
       if (!response.ok) {
         const err = await response.json()
@@ -60,6 +117,15 @@ export default function AppPage() {
       const data = await response.json()
       setResult({ fr: data.fr, en: data.en, short: data.short, bien: `${form.type} — ${form.localisation}`, prix: form.prix })
       setActiveTab('fr')
+
+      // ✅ Mettre à jour les crédits après génération
+      if (credits && !credits.isUnlimited) {
+        setCredits({
+          ...credits,
+          credits_remaining: credits.credits_remaining - 1,
+        })
+      }
+
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
     } catch (e: any) {
       showToast(e.message ?? 'Erreur lors de la génération')
@@ -88,59 +154,96 @@ export default function AppPage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px',
-    background: '#2A2A2C', border: '1px solid #3A3A3C',
-    color: '#FAFAF7', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', outline: 'none',
+    background: T.surface2, border: `1px solid ${T.border}`,
+    color: T.dark, fontFamily: "'DM Sans', sans-serif", fontSize: '13px', outline: 'none',
   }
 
   const labelStyle: React.CSSProperties = {
     fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
-    color: '#C9A96E', marginBottom: '8px', display: 'block',
+    color: T.gold, marginBottom: '8px', display: 'block',
   }
+
+  // ✅ Déterminer si le bouton doit être désactivé
+  const isGenerateDisabled = loading || (credits && !credits.isUnlimited && credits.credits_remaining === 0)
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
 
-      <aside style={{ background: '#18181A', padding: '36px 32px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+      <aside style={{ background: T.bg, padding: '36px 32px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
 
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginBottom: '8px' }}>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', color: '#FAFAF7' }}>Redac</span>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontStyle: 'italic', color: '#C9A96E', fontWeight: 300 }}>-Immo</span>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', color: T.dark }}>Redac</span>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontStyle: 'italic', color: T.gold, fontWeight: 300 }}>-Immo</span>
           </div>
-          <a href="/dashboard" style={{ fontSize: '11px', color: '#6B6B65', textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</a>
+          <Link href="/dashboard" style={{ fontSize: '11px', color: T.mid, textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</Link>
         </div>
 
-        <div>
-          <span style={labelStyle}>Formule</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {(['basique', 'essentiel', 'agence'] as Formule[]).map(f => (
-              <button key={f} onClick={() => setFormule(f)} style={{
-                padding: '10px 14px',
-                background: formule === f ? 'rgba(201,169,110,0.12)' : 'transparent',
-                border: `1px solid ${formule === f ? '#C9A96E' : '#333'}`,
-                color: formule === f ? '#C9A96E' : '#6B6B65',
-                fontFamily: "'DM Sans', sans-serif", fontSize: '12px',
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-                cursor: 'pointer', textAlign: 'left',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        {/* ✅ Formule actuelle + Crédits */}
+        {profile && credits && (
+          <div style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            padding: '16px',
+            borderRadius: '4px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Formule actuelle
+              </span>
+              <span style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: T.gold,
+                textTransform: 'uppercase',
               }}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-                <span>{f === 'basique' ? '5€' : f === 'essentiel' ? '9,99€' : '65€/mois'}</span>
-              </button>
-            ))}
+                {profile.plan}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Crédits
+              </span>
+              <span style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: credits.isUnlimited ? T.ok : T.dark,
+              }}>
+                {credits.isUnlimited ? 'Illimités' : credits.credits_remaining}
+              </span>
+            </div>
+            <Link
+              href="/dashboard?section=commande"
+              style={{
+                display: 'block',
+                marginTop: '12px',
+                padding: '8px 12px',
+                background: 'transparent',
+                border: `1px solid ${T.border}`,
+                color: T.gold,
+                fontSize: '11px',
+                textAlign: 'center',
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                transition: 'all 0.2s',
+              }}
+            >
+              Changer de formule
+            </Link>
           </div>
-        </div>
+        )}
 
-        {/* PERSONA */}
+        {/* ✅ Rédacteur (ex-Persona) */}
         <div>
-          <span style={labelStyle}>Persona</span>
+          <span style={labelStyle}>Rédacteur</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {(['Élise', 'Thomas', 'Marc', 'Sofia', 'Lucas', 'Claire'] as const).map(p => (
               <button key={p} onClick={() => setPersona(p)} style={{
                 padding: '9px 14px',
-                background: persona === p ? 'rgba(201,169,110,0.12)' : 'transparent',
-                border: `1px solid ${persona === p ? '#C9A96E' : '#333'}`,
-                color: persona === p ? '#C9A96E' : '#6B6B65',
+                background: persona === p ? T.goldBg : 'transparent',
+                border: `1px solid ${persona === p ? T.gold : T.border}`,
+                color: persona === p ? T.gold : T.mid,
                 fontFamily: "'DM Sans', sans-serif", fontSize: '12px',
                 letterSpacing: '0.1em', textTransform: 'uppercase',
                 cursor: 'pointer', textAlign: 'left',
@@ -198,7 +301,7 @@ export default function AppPage() {
 
         <div>
           <span style={labelStyle}>Points forts</span>
-          <textarea value={form.pointsForts} onChange={e => update('pointsForts', e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Vue mer, parquet chêne, cave…" />
+          <textarea value={form.pointsForts} onChange={e => update('pointsForts', e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Vue, parquet chêne, cave…" />
         </div>
 
         <div>
@@ -206,19 +309,41 @@ export default function AppPage() {
           <textarea value={form.infoCompl} onChange={e => update('infoCompl', e.target.value)} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} placeholder="DPE, charges, travaux récents…" />
         </div>
 
-        <button onClick={handleGenerate} disabled={loading} style={{
-          padding: '16px', background: loading ? '#9A7A48' : '#C9A96E', color: '#18181A',
-          border: 'none', fontFamily: "'DM Sans', sans-serif",
-          fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase',
-          cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 500,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-        }}>
+        {/* ✅ Upload d'images */}
+        <ImageUploader
+          onImagesChange={setImages}
+          maxImages={5}
+          maxSizeMB={6}
+        />
+
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerateDisabled}
+          title={credits && !credits.isUnlimited && credits.credits_remaining === 0 ? 'Aucun crédit disponible' : undefined}
+          style={{
+            padding: '16px',
+            background: isGenerateDisabled ? T.goldDim : T.gold,
+            color: T.bg,
+            border: 'none',
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: '12px',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            cursor: isGenerateDisabled ? 'not-allowed' : 'pointer',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            opacity: isGenerateDisabled ? 0.6 : 1,
+          }}
+        >
           {loading ? (
             <>
-              <span style={{ width: '12px', height: '12px', border: '2px solid rgba(24,24,26,0.3)', borderTopColor: '#18181A', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+              <span style={{ width: '12px', height: '12px', border: '2px solid rgba(24,24,26,0.3)', borderTopColor: T.bg, borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
               Génération…
             </>
-          ) : '✦ Générer l\'annonce'}
+          ) : 'Générer l\'annonce'}
         </button>
 
       </aside>
@@ -252,7 +377,7 @@ export default function AppPage() {
                 <div style={{ fontSize: '11px', color: '#6B6B65', marginTop: '4px' }}>{result.prix} · Formule {formule}</div>
               </div>
               <button onClick={downloadTxt} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>
-                ⬇ Télécharger
+                Télécharger
               </button>
             </div>
 
@@ -266,7 +391,7 @@ export default function AppPage() {
                     color: activeTab === tab ? '#C9A96E' : '#6B6B65',
                     fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px',
                   } as React.CSSProperties}>
-                    {tab === 'fr' ? '🇫🇷 Français' : tab === 'en' ? '🇬🇧 English' : '📱 Réseaux'}
+                    {tab === 'fr' ? 'Français' : tab === 'en' ? 'English' : 'Réseaux'}
                   </button>
                 ))}
               </div>
@@ -296,7 +421,7 @@ export default function AppPage() {
       </main>
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999, background: '#18181A', color: '#FAFAF7', padding: '14px 24px', fontSize: '13px', borderLeft: '3px solid #C9A96E', animation: 'slideUp 0.3s ease' }}>
+        <div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999, background: T.bg, color: T.dark, padding: '14px 24px', fontSize: '13px', borderLeft: `3px solid ${T.gold}`, animation: 'slideUp 0.3s ease' }}>
           {toast}
         </div>
       )}

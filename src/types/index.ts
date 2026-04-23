@@ -44,10 +44,27 @@ export interface GenerateRequest {
   infoCompl?: string
   formule: Formule
   persona?: PersonaName
+  images?: string[] // ✅ Ajouté : images en base64 pour l'analyse par Claude
 }
 
 export interface GenerateResponse {
   fr: string
   en: string
   short: string
+}
+
+// ✅ Nouveau : Type pour les crédits utilisateur
+export interface UserCredits {
+  credits_remaining: number
+  plan: Formule
+  isUnlimited: boolean
+}
+
+// ✅ Nouveau : Type pour la réponse de vérification des crédits
+export interface CreditCheckResponse {
+  hasCredits: boolean
+  creditsRemaining: number
+  isUnlimited: boolean
+  plan: Formule
+  error?: string
 }
