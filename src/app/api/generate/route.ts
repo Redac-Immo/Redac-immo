@@ -6,6 +6,7 @@ import type { GenerateRequest, GenerateResponse } from '@/types'
 import { resend } from '@/lib/resend/client'
 import { templateConfirmationAnnonce } from '@/lib/resend/templates/confirmation-annonce'
 import { rateLimit } from '@/lib/rate-limit'
+import { scoreAnnonce } from '@/lib/scoring'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -189,9 +190,6 @@ export async function POST(request: NextRequest) {
     }
 
     // ─── Vérification et décrément des crédits ────────────────
-    // Les plans agence et fondateur ont des annonces illimitées.
-    // Les plans basique et essentiel consomment des crédits depuis annonce_credits.
-
     const { data: profile } = await service
       .from('profiles')
       .select('plan, subscription_status')
@@ -201,7 +199,6 @@ export async function POST(request: NextRequest) {
     const isUnlimited = profile?.plan === 'agence' || profile?.plan === 'fondateur'
 
     if (!isUnlimited) {
-      // Chercher le crédit le plus récent avec des crédits restants
       const { data: credit } = await service
         .from('annonce_credits')
         .select('id, credits_remaining')
@@ -218,7 +215,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Décrémenter le crédit AVANT la génération
       const { error: decrementError } = await service
         .from('annonce_credits')
         .update({ credits_remaining: credit.credits_remaining - 1 })
@@ -237,17 +233,15 @@ export async function POST(request: NextRequest) {
       images: body.images,
     })
 
-    // Construire le contenu du message (texte + images)
     const messageContent: any[] = [{ type: 'text', text: userPrompt }]
     
-    // Ajouter les images si présentes
     if (imageContents && imageContents.length > 0) {
       messageContent.push(...imageContents)
     }
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000, // ✅ Augmenté pour l'analyse d'images
+      max_tokens: 2000,
       system: systemPrompt,
       messages: [{ role: 'user', content: messageContent }],
     })
@@ -274,9 +268,42 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
+    // ─── SCORING AUTOMATIQUE ──────────────────────────────────
+    if (annonce) {
+      try {
+        const scoringResult = await scoreAnnonce({
+          annonceFR: generated.fr,
+          type: body.type,
+          localisation: body.localisation,
+          prix: body.prix,
+          surface: body.surface,
+          pieces: body.pieces,
+          chambres: body.chambres,
+        })
+
+        if (scoringResult) {
+          await service.from('property_scores').upsert({
+            annonce_id: annonce.id,
+            note_globale: scoringResult.note_globale,
+            potentiel_investisseur: scoringResult.potentiel_investisseur,
+            potentiel_famille: scoringResult.potentiel_famille,
+            qualite_prestation: scoringResult.qualite_prestation,
+            luminosite: scoringResult.luminosite,
+            arguments_vente: scoringResult.arguments_vente,
+            points_vigilance: scoringResult.points_vigilance,
+            persona_cible: scoringResult.persona_cible,
+          })
+
+          console.log(`[generate] Scoring enregistré pour annonce ${annonce.id}`)
+        }
+      } catch (scoringErr) {
+        console.error('[generate] Erreur scoring:', scoringErr)
+        // Le scoring est optionnel, on ne bloque pas l'utilisateur
+      }
+    }
+
     // ─── Envoi de l'email de confirmation ───────────────────
     try {
-      // Récupérer le profil complet pour avoir le prénom
       const { data: userProfile } = await service
         .from('profiles')
         .select('prenom')
@@ -300,11 +327,9 @@ export async function POST(request: NextRequest) {
 
       if (emailError) {
         console.error('[generate] Erreur envoi email annonce:', emailError)
-        // On ne bloque pas l'utilisateur, on continue
       }
     } catch (emailErr) {
       console.error('[generate] Exception email annonce:', emailErr)
-      // On continue, l'email est secondaire
     }
 
     return NextResponse.json({ ...generated, annonceId: annonce?.id ?? null })
@@ -341,7 +366,6 @@ function buildPrompt(d: GenerateRequest & { persona?: string; images?: string[] 
 - Points forts : ${d.pointsForts || 'n/a'}
 - Informations complémentaires : ${d.infoCompl || 'aucune'}`.trim()
 
-  // ✅ Instructions pour l'analyse des photos
   const imageInstructions = d.images && d.images.length > 0
     ? '\n\nDes photos du bien sont fournies. Analyse-les pour enrichir ta description : mentionne les matériaux visibles (parquet, carrelage, pierre, etc.), la luminosité, les volumes, la vue depuis les fenêtres, l\'état général, les éléments remarquables (cheminée, poutres apparentes, terrasse, jardin, etc.). Sois précis et factuel. N\'invente rien que tu ne vois pas sur les photos.'
     : ''
@@ -361,9 +385,7 @@ Tu réponds UNIQUEMENT avec un JSON valide, sans markdown, sans backticks :
 
 ${propertyDetails}${d.images && d.images.length > 0 ? '\n\nAnalyse les photos ci-jointes pour enrichir l\'annonce.' : ''}`
 
-  // ✅ Construire le contenu pour Claude (avec images si présentes)
   const imageContents = d.images?.map(img => {
-    // Extraire le type MIME et les données base64
     const matches = img.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/)
     if (matches) {
       return {

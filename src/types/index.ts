@@ -53,18 +53,46 @@ export interface GenerateResponse {
   short: string
 }
 
-// ✅ Nouveau : Type pour les crédits utilisateur
+// ✅ Type pour les crédits utilisateur
 export interface UserCredits {
   credits_remaining: number
   plan: Formule
   isUnlimited: boolean
 }
 
-// ✅ Nouveau : Type pour la réponse de vérification des crédits
+// ✅ Type pour la réponse de vérification des crédits
 export interface CreditCheckResponse {
   hasCredits: boolean
   creditsRemaining: number
   isUnlimited: boolean
   plan: Formule
   error?: string
+}
+
+// ✅ Types pour le scoring automatique
+export type PersonaCible = 'Primo-accédant' | 'Investisseur' | 'Famille' | 'Senior' | 'Résidence secondaire'
+
+export interface PropertyScore {
+  id: string
+  annonce_id: string
+  note_globale: number
+  potentiel_investisseur: number
+  potentiel_famille: number
+  qualite_prestation: number
+  luminosite: number
+  arguments_vente: string[]
+  points_vigilance: string[]
+  persona_cible: PersonaCible
+  created_at: string
+}
+
+export interface ScoringResult {
+  note_globale: number
+  potentiel_investisseur: number
+  potentiel_famille: number
+  qualite_prestation: number
+  luminosite: number
+  arguments_vente: string[]
+  points_vigilance: string[]
+  persona_cible: PersonaCible
 }
