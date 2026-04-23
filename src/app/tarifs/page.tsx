@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { useCheckout } from '@/hooks/useCheckout'
 
 // ✅ ISR : Revalidation toutes les heures (3600 secondes)
-export const revalidate = 3600
 
 const PLANS = [
   {
