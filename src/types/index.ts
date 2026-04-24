@@ -20,6 +20,7 @@ export interface Profile {
 export interface Annonce {
   id: string
   user_id: string
+  reference?: string // ✅ Ajouté : référence unique (ex: REF-2026-0001)
   bien: string
   prix: string
   localisation: string
