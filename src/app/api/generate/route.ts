@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
 
     // ─── Sauvegarde Supabase ──────────────────────────────────
 
-    const { data: annonce } = await supabase
+    const { data: annonce } = await service
       .from('annonces')
       .insert({
         user_id: user.id,
