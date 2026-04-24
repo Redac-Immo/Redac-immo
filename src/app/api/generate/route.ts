@@ -268,7 +268,11 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
+    console.log('🔍 [generate] Annonce sauvegardée:', annonce?.id)
+
     // ─── SCORING AUTOMATIQUE ──────────────────────────────────
+    console.log('🔍 [generate] Tentative de scoring pour annonce:', annonce?.id)
+    
     if (annonce) {
       try {
         const scoringResult = await scoreAnnonce({
@@ -281,8 +285,10 @@ export async function POST(request: NextRequest) {
           chambres: body.chambres,
         })
 
+        console.log('🔍 [generate] Scoring result:', JSON.stringify(scoringResult))
+
         if (scoringResult) {
-          await service.from('property_scores').upsert({
+          const { error: upsertError } = await service.from('property_scores').upsert({
             annonce_id: annonce.id,
             note_globale: scoringResult.note_globale,
             potentiel_investisseur: scoringResult.potentiel_investisseur,
@@ -294,11 +300,16 @@ export async function POST(request: NextRequest) {
             persona_cible: scoringResult.persona_cible,
           })
 
-          console.log(`[generate] Scoring enregistré pour annonce ${annonce.id}`)
+          if (upsertError) {
+            console.error('🔍 [generate] Erreur upsert scoring:', upsertError)
+          } else {
+            console.log(`✅ [generate] Scoring enregistré pour annonce ${annonce.id}`)
+          }
+        } else {
+          console.log('🔍 [generate] Scoring result est null')
         }
       } catch (scoringErr) {
-        console.error('[generate] Erreur scoring:', scoringErr)
-        // Le scoring est optionnel, on ne bloque pas l'utilisateur
+        console.error('🔍 [generate] Erreur scoring:', scoringErr)
       }
     }
 
