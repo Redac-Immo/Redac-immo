@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
 
     // ─── Sauvegarde Supabase ──────────────────────────────────
 
-    const { data: annonce } = await service
+    const { data: annonce, error: insertError } = await service
       .from('annonces')
       .insert({
         user_id: user.id,
@@ -268,12 +268,16 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    console.log('🔍 [generate] Annonce sauvegardée:', annonce?.id)
+    if (insertError) {
+      console.error('🔍 [generate] Erreur insertion annonce:', insertError)
+    }
+    
+    console.log('🔍 [generate] Annonce sauvegardée:', annonce?.id, insertError ? `Erreur: ${insertError.message}` : 'OK')
 
     // ─── SCORING AUTOMATIQUE ──────────────────────────────────
     console.log('🔍 [generate] Tentative de scoring pour annonce:', annonce?.id)
     
-    if (annonce) {
+    if (annonce?.id) {
       try {
         const scoringResult = await scoreAnnonce({
           annonceFR: generated.fr,
@@ -285,7 +289,7 @@ export async function POST(request: NextRequest) {
           chambres: body.chambres,
         })
 
-        console.log('🔍 [generate] Scoring result:', JSON.stringify(scoringResult))
+        console.log('🔍 [generate] Scoring result:', scoringResult ? 'OK' : 'null')
 
         if (scoringResult) {
           const { error: upsertError } = await service.from('property_scores').upsert({
@@ -305,8 +309,6 @@ export async function POST(request: NextRequest) {
           } else {
             console.log(`✅ [generate] Scoring enregistré pour annonce ${annonce.id}`)
           }
-        } else {
-          console.log('🔍 [generate] Scoring result est null')
         }
       } catch (scoringErr) {
         console.error('🔍 [generate] Erreur scoring:', scoringErr)
