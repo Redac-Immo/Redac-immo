@@ -17,7 +17,8 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  const { data: annonces } = await supabase
+  // ✅ Utiliser le service role pour bypasser le RLS sur les annonces aussi
+  const { data: annonces } = await service
     .from('annonces')
     .select('*')
     .eq('user_id', user.id)
