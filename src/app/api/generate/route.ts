@@ -258,7 +258,6 @@ export async function POST(request: NextRequest) {
         bien: `${body.type} — ${body.localisation}`,
         prix: body.prix,
         localisation: body.localisation,
-        surface: body.surface,
         formule: body.formule,
         fr: generated.fr,
         en: generated.en,
