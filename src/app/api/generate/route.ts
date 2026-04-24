@@ -151,6 +151,20 @@ Longueur cible : 180 à 220 mots.`,
   example: '',
 }
 
+// ─── GÉNÉRATEUR DE RÉFÉRENCE ──────────────────────────────────
+
+async function generateReference(service: ReturnType<typeof createServiceClient>): Promise<string> {
+  const year = new Date().getFullYear()
+  
+  // Compter le nombre total d'annonces pour le numéro séquentiel
+  const { count } = await service
+    .from('annonces')
+    .select('*', { count: 'exact', head: true })
+  
+  const nextNumber = String((count ?? 0) + 1).padStart(4, '0')
+  return `REF-${year}-${nextNumber}`
+}
+
 // ─── ROUTE HANDLER ────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -249,12 +263,16 @@ export async function POST(request: NextRequest) {
     const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
     const generated = parseResponse(rawText)
 
+    // ✅ Générer la référence AVANT l'insertion
+    const reference = await generateReference(service)
+
     // ─── Sauvegarde Supabase ──────────────────────────────────
 
     const { data: annonce, error: insertError } = await service
       .from('annonces')
       .insert({
         user_id: user.id,
+        reference, // ✅ Référence ajoutée
         bien: `${body.type} — ${body.localisation}`,
         prix: body.prix,
         localisation: body.localisation,
@@ -271,10 +289,9 @@ export async function POST(request: NextRequest) {
       console.error('🔍 [generate] Erreur insertion annonce:', insertError)
     }
     
-    console.log('🔍 [generate] Annonce sauvegardée:', annonce?.id, insertError ? `Erreur: ${insertError.message}` : 'OK')
+    console.log('🔍 [generate] Annonce sauvegardée:', annonce?.id, `ref: ${reference}`)
 
     // ─── SCORING AUTOMATIQUE ──────────────────────────────────
-    console.log('🔍 [generate] Tentative de scoring pour annonce:', annonce?.id)
     
     if (annonce?.id) {
       try {
@@ -288,10 +305,8 @@ export async function POST(request: NextRequest) {
           chambres: body.chambres,
         })
 
-        console.log('🔍 [generate] Scoring result:', scoringResult ? 'OK' : 'null')
-
         if (scoringResult) {
-          const { error: upsertError } = await service.from('property_scores').upsert({
+          await service.from('property_scores').upsert({
             annonce_id: annonce.id,
             note_globale: scoringResult.note_globale,
             potentiel_investisseur: scoringResult.potentiel_investisseur,
@@ -303,11 +318,7 @@ export async function POST(request: NextRequest) {
             persona_cible: scoringResult.persona_cible,
           })
 
-          if (upsertError) {
-            console.error('🔍 [generate] Erreur upsert scoring:', upsertError)
-          } else {
-            console.log(`✅ [generate] Scoring enregistré pour annonce ${annonce.id}`)
-          }
+          console.log(`✅ [generate] Scoring enregistré pour annonce ${annonce.id}`)
         }
       } catch (scoringErr) {
         console.error('🔍 [generate] Erreur scoring:', scoringErr)
@@ -344,7 +355,7 @@ export async function POST(request: NextRequest) {
       console.error('[generate] Exception email annonce:', emailErr)
     }
 
-    return NextResponse.json({ ...generated, annonceId: annonce?.id ?? null })
+    return NextResponse.json({ ...generated, annonceId: annonce?.id ?? null, reference })
 
   } catch (error) {
     console.error('[generate] Error:', error)
