@@ -35,55 +35,52 @@ export default function AppPage() {
   const [toast, setToast] = useState<string | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 
-  // États pour les images et les crédits
   const [images, setImages] = useState<string[]>([])
   const [credits, setCredits] = useState<UserCredits | null>(null)
   const [profile, setProfile] = useState<{ plan: Formule } | null>(null)
 
-  // Charger le profil et les crédits au montage
+  // ✅ Charger le profil et les crédits au montage
   useEffect(() => {
     async function loadUserData() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
-      console.log('🔍 [AppPage] User:', user?.email)
-      
       if (!user) return
 
       // Récupérer le profil
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('plan')
         .eq('id', user.id)
         .single()
-
-      console.log('🔍 [AppPage] Profile:', profileData, profileError)
 
       if (profileData) {
         setProfile(profileData)
         setFormule(profileData.plan)
       }
 
-      // Récupérer les crédits
-      const { data: creditsData, error: creditsError } = await supabase
-        .from('annonce_credits')
-        .select('credits_remaining, plan')
-        .eq('user_id', user.id)
-        .gt('credits_remaining', 0)
-        .order('created_at', { ascending: false })
-
-      console.log('🔍 [AppPage] Credits data:', creditsData, creditsError)
-
-      const totalCredits = creditsData?.reduce((sum, c) => sum + c.credits_remaining, 0) || 0
-      const isUnlimited = profileData?.plan === 'agence' || profileData?.plan === 'fondateur'
-
-      console.log('🔍 [AppPage] Calculated:', { totalCredits, isUnlimited, plan: profileData?.plan })
-
-      setCredits({
-        credits_remaining: totalCredits,
-        plan: profileData?.plan || 'basique',
-        isUnlimited,
-      })
+      // ✅ Récupérer les crédits via l'API (qui utilise le service role)
+      try {
+        const res = await fetch('/api/credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        })
+        const data = await res.json()
+        
+        setCredits({
+          credits_remaining: data.credits_remaining ?? 0,
+          plan: profileData?.plan || 'basique',
+          isUnlimited: profileData?.plan === 'agence' || profileData?.plan === 'fondateur',
+        })
+      } catch (err) {
+        console.error('Erreur chargement crédits:', err)
+        setCredits({
+          credits_remaining: 0,
+          plan: profileData?.plan || 'basique',
+          isUnlimited: profileData?.plan === 'agence' || profileData?.plan === 'fondateur',
+        })
+      }
     }
 
     loadUserData()
@@ -125,7 +122,6 @@ export default function AppPage() {
       setResult({ fr: data.fr, en: data.en, short: data.short, bien: `${form.type} — ${form.localisation}`, prix: form.prix })
       setActiveTab('fr')
 
-      // Mettre à jour les crédits après génération
       if (credits && !credits.isUnlimited) {
         setCredits({
           ...credits,
@@ -185,7 +181,7 @@ export default function AppPage() {
           <Link href="/dashboard" style={{ fontSize: '11px', color: T.mid, textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</Link>
         </div>
 
-        {/* ✅ Bloc Formule actuelle + Crédits - VISIBLE EN PERMANENCE */}
+        {/* ✅ Bloc Formule actuelle + Crédits */}
         <div style={{
           background: T.surface,
           border: `2px solid ${T.gold}`,
@@ -196,12 +192,7 @@ export default function AppPage() {
             <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Formule actuelle
             </span>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: T.gold,
-              textTransform: 'uppercase',
-            }}>
+            <span style={{ fontSize: '12px', fontWeight: 500, color: T.gold, textTransform: 'uppercase' }}>
               {profile?.plan || 'Chargement...'}
             </span>
           </div>
@@ -209,36 +200,25 @@ export default function AppPage() {
             <span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Crédits
             </span>
-            <span style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: credits?.isUnlimited ? T.ok : T.dark,
-            }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: credits?.isUnlimited ? T.ok : T.dark }}>
               {credits?.isUnlimited ? 'Illimités' : credits?.credits_remaining ?? '—'}
             </span>
           </div>
           <Link
             href="/dashboard?section=commande"
             style={{
-              display: 'block',
-              marginTop: '12px',
-              padding: '8px 12px',
-              background: 'transparent',
-              border: `1px solid ${T.border}`,
-              color: T.gold,
-              fontSize: '11px',
-              textAlign: 'center',
-              textDecoration: 'none',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              transition: 'all 0.2s',
+              display: 'block', marginTop: '12px', padding: '8px 12px',
+              background: 'transparent', border: `1px solid ${T.border}`,
+              color: T.gold, fontSize: '11px', textAlign: 'center',
+              textDecoration: 'none', textTransform: 'uppercase',
+              letterSpacing: '0.1em', transition: 'all 0.2s',
             }}
           >
             Changer de formule
           </Link>
         </div>
 
-        {/* ✅ Rédacteur (ex-Persona) */}
+        {/* ✅ Rédacteur */}
         <div>
           <span style={labelStyle}>Rédacteur</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -275,70 +255,29 @@ export default function AppPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div>
-            <span style={labelStyle}>Surface (m²) *</span>
-            <input type="number" value={form.surface} onChange={e => update('surface', e.target.value)} style={inputStyle} placeholder="85" />
-          </div>
-          <div>
-            <span style={labelStyle}>Terrain (m²)</span>
-            <input type="number" value={form.terrain} onChange={e => update('terrain', e.target.value)} style={inputStyle} placeholder="500" />
-          </div>
-          <div>
-            <span style={labelStyle}>Pièces</span>
-            <input type="number" value={form.pieces} onChange={e => update('pieces', e.target.value)} style={inputStyle} placeholder="4" />
-          </div>
-          <div>
-            <span style={labelStyle}>Chambres</span>
-            <input type="number" value={form.chambres} onChange={e => update('chambres', e.target.value)} style={inputStyle} placeholder="2" />
-          </div>
+          <div><span style={labelStyle}>Surface (m²) *</span><input type="number" value={form.surface} onChange={e => update('surface', e.target.value)} style={inputStyle} placeholder="85" /></div>
+          <div><span style={labelStyle}>Terrain (m²)</span><input type="number" value={form.terrain} onChange={e => update('terrain', e.target.value)} style={inputStyle} placeholder="500" /></div>
+          <div><span style={labelStyle}>Pièces</span><input type="number" value={form.pieces} onChange={e => update('pieces', e.target.value)} style={inputStyle} placeholder="4" /></div>
+          <div><span style={labelStyle}>Chambres</span><input type="number" value={form.chambres} onChange={e => update('chambres', e.target.value)} style={inputStyle} placeholder="2" /></div>
         </div>
 
-        <div>
-          <span style={labelStyle}>Localisation *</span>
-          <input type="text" value={form.localisation} onChange={e => update('localisation', e.target.value)} style={inputStyle} placeholder="Lyon 6ème, Rhône" />
-        </div>
+        <div><span style={labelStyle}>Localisation *</span><input type="text" value={form.localisation} onChange={e => update('localisation', e.target.value)} style={inputStyle} placeholder="Lyon 6ème, Rhône" /></div>
+        <div><span style={labelStyle}>Prix *</span><input type="text" value={form.prix} onChange={e => update('prix', e.target.value)} style={inputStyle} placeholder="450 000 €" /></div>
+        <div><span style={labelStyle}>Points forts</span><textarea value={form.pointsForts} onChange={e => update('pointsForts', e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Vue, parquet chêne, cave…" /></div>
+        <div><span style={labelStyle}>Infos complémentaires</span><textarea value={form.infoCompl} onChange={e => update('infoCompl', e.target.value)} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} placeholder="DPE, charges, travaux récents…" /></div>
 
-        <div>
-          <span style={labelStyle}>Prix *</span>
-          <input type="text" value={form.prix} onChange={e => update('prix', e.target.value)} style={inputStyle} placeholder="450 000 €" />
-        </div>
-
-        <div>
-          <span style={labelStyle}>Points forts</span>
-          <textarea value={form.pointsForts} onChange={e => update('pointsForts', e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Vue, parquet chêne, cave…" />
-        </div>
-
-        <div>
-          <span style={labelStyle}>Infos complémentaires</span>
-          <textarea value={form.infoCompl} onChange={e => update('infoCompl', e.target.value)} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} placeholder="DPE, charges, travaux récents…" />
-        </div>
-
-        {/* ✅ Upload d'images */}
-        <ImageUploader
-          onImagesChange={setImages}
-          maxImages={5}
-          maxSizeMB={6}
-        />
+        <ImageUploader onImagesChange={setImages} maxImages={5} maxSizeMB={6} />
 
         <button
           onClick={handleGenerate}
           disabled={isGenerateDisabled}
           title={credits && !credits.isUnlimited && credits.credits_remaining === 0 ? 'Aucun crédit disponible' : undefined}
           style={{
-            padding: '16px',
-            background: isGenerateDisabled ? T.goldDim : T.gold,
-            color: T.bg,
-            border: 'none',
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: '12px',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            cursor: isGenerateDisabled ? 'not-allowed' : 'pointer',
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
+            padding: '16px', background: isGenerateDisabled ? T.goldDim : T.gold, color: T.bg,
+            border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '12px',
+            letterSpacing: '0.18em', textTransform: 'uppercase',
+            cursor: isGenerateDisabled ? 'not-allowed' : 'pointer', fontWeight: 500,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             opacity: isGenerateDisabled ? 0.6 : 1,
           }}
         >
@@ -347,13 +286,12 @@ export default function AppPage() {
               <span style={{ width: '12px', height: '12px', border: '2px solid rgba(24,24,26,0.3)', borderTopColor: T.bg, borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
               Génération…
             </>
-          ) : credits && !credits.isUnlimited && credits.credits_remaining === 0 ? 'Aucun crédit' : 'Générer l\'annonce'}
+          ) : credits && !credits.isUnlimited && credits.credits_remaining === 0 ? 'Aucun crédit' : "Générer l'annonce"}
         </button>
 
       </aside>
 
       <main style={{ background: '#F2F2EE', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
-
         {!result && !loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
             <div style={{ textAlign: 'center', color: '#6B6B65' }}>
@@ -363,7 +301,6 @@ export default function AppPage() {
             </div>
           </div>
         )}
-
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
             <div style={{ textAlign: 'center' }}>
@@ -372,7 +309,6 @@ export default function AppPage() {
             </div>
           </div>
         )}
-
         {result && (
           <div ref={resultRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ background: '#FAFAF7', borderTop: '3px solid #C9A96E', padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -380,23 +316,12 @@ export default function AppPage() {
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 500 }}>{result.bien}</div>
                 <div style={{ fontSize: '11px', color: '#6B6B65', marginTop: '4px' }}>{result.prix} · Formule {formule}</div>
               </div>
-              <button onClick={downloadTxt} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Télécharger
-              </button>
+              <button onClick={downloadTxt} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>Télécharger</button>
             </div>
-
             <div style={{ background: '#FAFAF7', border: '1px solid #E8E8E4' }}>
               <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E4' }}>
                 {(['fr', 'en', 'short'] as const).map(tab => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                    padding: '12px 20px', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase',
-                    cursor: 'pointer', background: 'none', border: 'none',
-                    borderBottom: `2px solid ${activeTab === tab ? '#C9A96E' : 'transparent'}`,
-                    color: activeTab === tab ? '#C9A96E' : '#6B6B65',
-                    fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px',
-                  } as React.CSSProperties}>
-                    {tab === 'fr' ? 'Français' : tab === 'en' ? 'English' : 'Réseaux'}
-                  </button>
+                  <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '12px 20px', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab ? '#C9A96E' : 'transparent'}`, color: activeTab === tab ? '#C9A96E' : '#6B6B65', fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px' } as React.CSSProperties}>{tab === 'fr' ? 'Français' : tab === 'en' ? 'English' : 'Réseaux'}</button>
                 ))}
               </div>
               <div style={{ padding: '24px' }}>
@@ -404,17 +329,11 @@ export default function AppPage() {
                   {activeTab === 'fr' ? result.fr : activeTab === 'en' ? (result.en || '— Non disponible pour la formule Basique') : (result.short || '— Non disponible pour la formule Basique')}
                 </div>
                 <div style={{ marginTop: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button onClick={() => copyText(activeTab === 'fr' ? result.fr : activeTab === 'en' ? result.en : result.short)} style={{ padding: '9px 20px', background: '#C9A96E', color: '#18181A', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>
-                    Copier
-                  </button>
+                  <button onClick={() => copyText(activeTab === 'fr' ? result.fr : activeTab === 'en' ? result.en : result.short)} style={{ padding: '9px 20px', background: '#C9A96E', color: '#18181A', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>Copier</button>
                   {activeTab === 'fr' && (
                     <>
-                      <button onClick={() => { copyText(result.fr); window.open('https://www.leboncoin.fr/deposer-une-annonce', '_blank') }} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', cursor: 'pointer' }}>
-                        LeBonCoin →
-                      </button>
-                      <button onClick={() => { copyText(result.fr); window.open('https://www.pap.fr/annonce/deposer', '_blank') }} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', cursor: 'pointer' }}>
-                        PAP.fr →
-                      </button>
+                      <button onClick={() => { copyText(result.fr); window.open('https://www.leboncoin.fr/deposer-une-annonce', '_blank') }} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', cursor: 'pointer' }}>LeBonCoin →</button>
+                      <button onClick={() => { copyText(result.fr); window.open('https://www.pap.fr/annonce/deposer', '_blank') }} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', cursor: 'pointer' }}>PAP.fr →</button>
                     </>
                   )}
                 </div>
