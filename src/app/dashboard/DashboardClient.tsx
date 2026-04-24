@@ -26,7 +26,6 @@ const SECTION_TITLES: Record<Section, string> = {
 }
 
 export default function DashboardClient({ user, profile, annonces }: Props) {
-  console.log('🔍 [DashboardClient] profile reçu:', profile)
   const [activeSection, setActiveSection] = useState<Section>('compte')
   const [toast, setToast] = useState<{ msg: string; type?: string } | null>(null)
   const [localAnnonces, setLocalAnnonces] = useState<Annonce[]>(annonces)
@@ -282,7 +281,7 @@ function SectionCompte({ profile, user, showToast }: { profile: Profile | null; 
         <div style={{ padding: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>Supprimer mon compte</div>
-            <div style={{ fontSize: '12px', color: T.mid, maxWidth: '420px', lineHeight: 1.6 }}>Action irréversible. Toutes vos annonces et données seront supprimées.</div>
+            <div style={{ fontSize: '12px', color: T.mid, maxWidth: '420px', lineHeight: 1.6 }}>Action irréversible.</div>
           </div>
           <button onClick={() => { if (confirm('Êtes-vous certain ?')) showToast('Demande envoyée', 'ok') }} style={{ padding: '7px 16px', background: 'transparent', border: '1px solid rgba(193,18,31,0.3)', color: T.err, fontFamily: "'DM Sans', sans-serif", fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>Supprimer le compte</button>
         </div>
@@ -292,7 +291,7 @@ function SectionCompte({ profile, user, showToast }: { profile: Profile | null; 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION ANNONCES (AVEC SCORING)
+// SECTION ANNONCES (AVEC SCORING + RÉFÉRENCE)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function SectionAnnonces({ annonces, setAnnonces, showToast, scores }: { annonces: Annonce[]; setAnnonces: (a: Annonce[]) => void; showToast: (m: string, t?: string) => void; scores: Record<string, PropertyScoreType> }) {
@@ -330,7 +329,14 @@ function SectionAnnonces({ annonces, setAnnonces, showToast, scores }: { annonce
                 <div style={{ width: '3px', flexShrink: 0, background: annonce.statut === 'encours' ? T.gold : annonce.statut === 'vendu' ? T.ok : T.border }} />
                 <div style={{ flex: 1, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 500, color: T.dark }}>{annonce.bien}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: T.dark, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      {annonce.bien}
+                      {annonce.reference && (
+                        <span style={{ fontSize: '10px', color: T.gold, fontFamily: "'DM Sans', sans-serif", fontWeight: 400, letterSpacing: '0.06em', background: 'rgba(201,169,110,0.1)', padding: '2px 8px', borderRadius: '3px' }}>
+                          {annonce.reference}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: '11px', color: T.mid, marginTop: '3px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                       <span>{new Date(annonce.created_at).toLocaleDateString('fr-FR')}</span>
                       <span>· {annonce.prix}</span>
@@ -348,9 +354,7 @@ function SectionAnnonces({ annonces, setAnnonces, showToast, scores }: { annonce
               </div>
               {openId === annonce.id && (
                 <div style={{ borderTop: `1px solid ${T.border}`, padding: '22px', background: T.bg2, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {/* Score du bien */}
                   {scores[annonce.id] && <PropertyScore score={scores[annonce.id]} />}
-                  {/* Onglets */}
                   <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}` }}>
                     {(['fr', 'en', 'short'] as const).map(tab => (
                       <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '10px 20px', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', color: activeTab === tab ? T.gold : T.mid, borderBottom: `2px solid ${activeTab === tab ? T.gold : 'transparent'}`, background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px', transition: 'all 0.15s' } as React.CSSProperties}>{tab === 'fr' ? 'Version FR' : tab === 'en' ? 'Version EN' : 'Réseaux sociaux'}</button>
