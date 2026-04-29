@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Formule, GenerateResponse, UserCredits } from '@/types'
@@ -25,6 +25,16 @@ const EMPTY_FORM: FormData = {
   localisation: '', prix: '', pointsForts: '', infoCompl: '',
 }
 
+// ✅ Portails de diffusion
+const PORTAILS = [
+  { name: 'LeBonCoin', url: 'https://www.leboncoin.fr/deposer-une-annonce' },
+  { name: 'SeLoger', url: 'https://www.seloger.com/deposer-une-annonce' },
+  { name: 'Bien\'ici', url: 'https://www.bienici.com/deposer-une-annonce' },
+  { name: 'PAP', url: 'https://www.pap.fr/annonce/deposer' },
+  { name: 'Logic-Immo', url: 'https://www.logic-immo.com/deposer-une-annonce' },
+  { name: 'Meilleurs Agents', url: 'https://www.meilleursagents.com/deposer-une-annonce' },
+]
+
 export default function AppPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [formule, setFormule] = useState<Formule>('essentiel')
@@ -34,6 +44,7 @@ export default function AppPage() {
   const [activeTab, setActiveTab] = useState<'fr' | 'en' | 'short'>('fr')
   const [toast, setToast] = useState<string | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
+  const editableRef = useRef<HTMLDivElement>(null)
 
   const [images, setImages] = useState<string[]>([])
   const [credits, setCredits] = useState<UserCredits | null>(null)
@@ -47,7 +58,6 @@ export default function AppPage() {
       
       if (!user) return
 
-      // Récupérer le profil
       const { data: profileData } = await supabase
         .from('profiles')
         .select('plan')
@@ -59,7 +69,6 @@ export default function AppPage() {
         setFormule(profileData.plan)
       }
 
-      // ✅ Récupérer les crédits via l'API (qui utilise le service role)
       try {
         const res = await fetch('/api/credits', {
           method: 'POST',
@@ -142,10 +151,41 @@ export default function AppPage() {
     showToast('Texte copié')
   }
 
+  // ✅ Obtenir le texte édité (depuis le contentEditable)
+  function getEditedText(): string {
+    if (editableRef.current) {
+      return editableRef.current.innerText || ''
+    }
+    return ''
+  }
+
+  // ✅ Obtenir le HTML édité (avec mise en forme)
+  function getEditedHTML(): string {
+    if (editableRef.current) {
+      return editableRef.current.innerHTML || ''
+    }
+    return ''
+  }
+
+  // ✅ Appliquer une commande de mise en forme
+  function execFormat(command: string, value?: string) {
+    document.execCommand(command, false, value)
+    editableRef.current?.focus()
+  }
+
+  // ✅ Copier et ouvrir un portail
+  function copyAndOpen(url: string) {
+    const text = getEditedText() || (activeTab === 'fr' ? result?.fr : activeTab === 'en' ? result?.en : result?.short) || ''
+    navigator.clipboard.writeText(text)
+    window.open(url, '_blank')
+    showToast('Texte copié · Ouverture du portail')
+  }
+
   function downloadTxt() {
     if (!result) return
+    const editedText = getEditedText() || result.fr
     let content = `ANNONCE — ${result.bien}\nPrix : ${result.prix}\n${'─'.repeat(60)}\n\n`
-    content += `VERSION FRANÇAISE\n\n${result.fr}\n\n`
+    content += `VERSION FRANÇAISE\n\n${editedText}\n\n`
     if (result.en) content += `${'─'.repeat(60)}\n\nENGLISH VERSION\n\n${result.en}\n\n`
     if (result.short) content += `${'─'.repeat(60)}\n\nRÉSEAUX SOCIAUX\n\n${result.short}`
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
@@ -154,6 +194,14 @@ export default function AppPage() {
     a.download = `annonce_${result.bien.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`
     a.click()
   }
+
+  // ✅ Texte à afficher dans l'éditeur
+  const getActiveText = useCallback(() => {
+    if (!result) return ''
+    if (activeTab === 'fr') return result.fr
+    if (activeTab === 'en') return result.en || '— Non disponible pour la formule Basique'
+    return result.short || '— Non disponible pour la formule Basique'
+  }, [result, activeTab])
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px',
@@ -311,32 +359,82 @@ export default function AppPage() {
         )}
         {result && (
           <div ref={resultRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* En-tête */}
             <div style={{ background: '#FAFAF7', borderTop: '3px solid #C9A96E', padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 500 }}>{result.bien}</div>
                 <div style={{ fontSize: '11px', color: '#6B6B65', marginTop: '4px' }}>{result.prix} · Formule {formule}</div>
               </div>
-              <button onClick={downloadTxt} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>Télécharger</button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={() => copyText(getEditedText() || getActiveText())} style={{ padding: '8px 18px', background: '#C9A96E', color: '#18181A', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>Copier</button>
+                <button onClick={downloadTxt} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>Télécharger</button>
+              </div>
             </div>
+
+            {/* Cadre éditable */}
             <div style={{ background: '#FAFAF7', border: '1px solid #E8E8E4' }}>
+              {/* Onglets */}
               <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E4' }}>
                 {(['fr', 'en', 'short'] as const).map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '12px 20px', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab ? '#C9A96E' : 'transparent'}`, color: activeTab === tab ? '#C9A96E' : '#6B6B65', fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px' } as React.CSSProperties}>{tab === 'fr' ? 'Français' : tab === 'en' ? 'English' : 'Réseaux'}</button>
                 ))}
               </div>
-              <div style={{ padding: '24px' }}>
-                <div style={{ fontSize: '14px', lineHeight: 1.85, whiteSpace: 'pre-wrap', color: '#18181A', minHeight: '160px' }}>
-                  {activeTab === 'fr' ? result.fr : activeTab === 'en' ? (result.en || '— Non disponible pour la formule Basique') : (result.short || '— Non disponible pour la formule Basique')}
-                </div>
-                <div style={{ marginTop: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button onClick={() => copyText(activeTab === 'fr' ? result.fr : activeTab === 'en' ? result.en : result.short)} style={{ padding: '9px 20px', background: '#C9A96E', color: '#18181A', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>Copier</button>
-                  {activeTab === 'fr' && (
-                    <>
-                      <button onClick={() => { copyText(result.fr); window.open('https://www.leboncoin.fr/deposer-une-annonce', '_blank') }} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', cursor: 'pointer' }}>LeBonCoin →</button>
-                      <button onClick={() => { copyText(result.fr); window.open('https://www.pap.fr/annonce/deposer', '_blank') }} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid #E8E8E4', color: '#6B6B65', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', cursor: 'pointer' }}>PAP.fr →</button>
-                    </>
-                  )}
-                </div>
+
+              {/* ✅ Barre d'outils d'édition */}
+              <div style={{ display: 'flex', gap: '4px', padding: '12px 16px', borderBottom: '1px solid #E8E8E4', flexWrap: 'wrap' }}>
+                <button onClick={() => execFormat('bold')} style={toolBtnStyle} title="Gras"><strong>G</strong></button>
+                <button onClick={() => execFormat('italic')} style={toolBtnStyle} title="Italique"><em>I</em></button>
+                <button onClick={() => execFormat('underline')} style={toolBtnStyle} title="Souligné"><u>S</u></button>
+                <span style={{ width: '1px', background: '#E8E8E4', margin: '0 8px' }} />
+                <button onClick={() => execFormat('insertUnorderedList')} style={toolBtnStyle} title="Liste à puces">• Liste</button>
+                <button onClick={() => execFormat('removeFormat')} style={toolBtnStyle} title="Effacer la mise en forme">Effacer</button>
+              </div>
+
+              {/* ✅ Zone éditable */}
+              <div
+                ref={editableRef}
+                contentEditable
+                suppressContentEditableWarning
+                key={activeTab}
+                dangerouslySetInnerHTML={{ __html: getActiveText().replace(/\n/g, '<br>') }}
+                style={{
+                  padding: '24px',
+                  fontSize: '14px',
+                  lineHeight: 1.85,
+                  color: '#18181A',
+                  minHeight: '200px',
+                  outline: 'none',
+                  whiteSpace: 'pre-wrap',
+                }}
+              />
+            </div>
+
+            {/* ✅ Boutons de diffusion vers les portails */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6B6B65' }}>
+                Publier sur un portail
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {PORTAILS.map(portail => (
+                  <button
+                    key={portail.name}
+                    onClick={() => copyAndOpen(portail.url)}
+                    style={{
+                      padding: '10px 12px',
+                      background: '#18181A',
+                      color: '#FAFAF7',
+                      border: '1px solid #333336',
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: '11px',
+                      letterSpacing: '0.08em',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {portail.name} →
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -355,4 +453,17 @@ export default function AppPage() {
       `}</style>
     </div>
   )
+}
+
+// ✅ Style des boutons de la barre d'outils
+const toolBtnStyle: React.CSSProperties = {
+  padding: '6px 12px',
+  background: 'transparent',
+  border: '1px solid #E8E8E4',
+  color: '#6B6B65',
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: '12px',
+  cursor: 'pointer',
+  borderRadius: '3px',
+  transition: 'all 0.15s',
 }
