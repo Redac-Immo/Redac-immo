@@ -25,7 +25,6 @@ const EMPTY_FORM: FormData = {
   localisation: '', prix: '', pointsForts: '', infoCompl: '',
 }
 
-// ✅ Portails de diffusion
 const PORTAILS = [
   { name: 'LeBonCoin', url: 'https://www.leboncoin.fr/deposer-une-annonce' },
   { name: 'SeLoger', url: 'https://www.seloger.com/deposer-une-annonce' },
@@ -50,7 +49,6 @@ export default function AppPage() {
   const [credits, setCredits] = useState<UserCredits | null>(null)
   const [profile, setProfile] = useState<{ plan: Formule } | null>(null)
 
-  // ✅ Charger le profil et les crédits au montage
   useEffect(() => {
     async function loadUserData() {
       const supabase = createClient()
@@ -151,7 +149,6 @@ export default function AppPage() {
     showToast('Texte copié')
   }
 
-  // ✅ Obtenir le texte édité (depuis le contentEditable)
   function getEditedText(): string {
     if (editableRef.current) {
       return editableRef.current.innerText || ''
@@ -159,21 +156,11 @@ export default function AppPage() {
     return ''
   }
 
-  // ✅ Obtenir le HTML édité (avec mise en forme)
-  function getEditedHTML(): string {
-    if (editableRef.current) {
-      return editableRef.current.innerHTML || ''
-    }
-    return ''
-  }
-
-  // ✅ Appliquer une commande de mise en forme
   function execFormat(command: string, value?: string) {
     document.execCommand(command, false, value)
     editableRef.current?.focus()
   }
 
-  // ✅ Copier et ouvrir un portail
   function copyAndOpen(url: string) {
     const text = getEditedText() || (activeTab === 'fr' ? result?.fr : activeTab === 'en' ? result?.en : result?.short) || ''
     navigator.clipboard.writeText(text)
@@ -195,7 +182,6 @@ export default function AppPage() {
     a.click()
   }
 
-  // ✅ Texte à afficher dans l'éditeur
   const getActiveText = useCallback(() => {
     if (!result) return ''
     if (activeTab === 'fr') return result.fr
@@ -229,7 +215,6 @@ export default function AppPage() {
           <Link href="/dashboard" style={{ fontSize: '11px', color: T.mid, textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</Link>
         </div>
 
-        {/* ✅ Bloc Formule actuelle + Crédits */}
         <div style={{
           background: T.surface,
           border: `2px solid ${T.gold}`,
@@ -266,7 +251,6 @@ export default function AppPage() {
           </Link>
         </div>
 
-        {/* ✅ Rédacteur */}
         <div>
           <span style={labelStyle}>Rédacteur</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -339,7 +323,8 @@ export default function AppPage() {
 
       </aside>
 
-      <main style={{ background: '#F2F2EE', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
+      {/* ✅ MODIFICATION 1 — Fond du main plus sombre */}
+      <main style={{ background: '#EAEAE6', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
         {!result && !loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
             <div style={{ textAlign: 'center', color: '#6B6B65' }}>
@@ -359,8 +344,8 @@ export default function AppPage() {
         )}
         {result && (
           <div ref={resultRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* En-tête */}
-            <div style={{ background: '#FAFAF7', borderTop: '3px solid #C9A96E', padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            {/* ✅ MODIFICATION 3 — En-tête fond blanc + ombre */}
+            <div style={{ background: '#FFFFFF', borderTop: '3px solid #C9A96E', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 500 }}>{result.bien}</div>
                 <div style={{ fontSize: '11px', color: '#6B6B65', marginTop: '4px' }}>{result.prix} · Formule {formule}</div>
@@ -371,16 +356,14 @@ export default function AppPage() {
               </div>
             </div>
 
-            {/* Cadre éditable */}
-            <div style={{ background: '#FAFAF7', border: '1px solid #E8E8E4' }}>
-              {/* Onglets */}
+            {/* ✅ MODIFICATION 2 — Zone éditable fond blanc + ombre + bordure gauche dorée */}
+            <div style={{ background: '#FFFFFF', border: '1px solid #D8D8D4', borderLeft: '3px solid #C9A96E', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
               <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E4' }}>
                 {(['fr', 'en', 'short'] as const).map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '12px 20px', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab ? '#C9A96E' : 'transparent'}`, color: activeTab === tab ? '#C9A96E' : '#6B6B65', fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px' } as React.CSSProperties}>{tab === 'fr' ? 'Français' : tab === 'en' ? 'English' : 'Réseaux'}</button>
                 ))}
               </div>
 
-              {/* ✅ Barre d'outils d'édition */}
               <div style={{ display: 'flex', gap: '4px', padding: '12px 16px', borderBottom: '1px solid #E8E8E4', flexWrap: 'wrap' }}>
                 <button onClick={() => execFormat('bold')} style={toolBtnStyle} title="Gras"><strong>G</strong></button>
                 <button onClick={() => execFormat('italic')} style={toolBtnStyle} title="Italique"><em>I</em></button>
@@ -390,7 +373,6 @@ export default function AppPage() {
                 <button onClick={() => execFormat('removeFormat')} style={toolBtnStyle} title="Effacer la mise en forme">Effacer</button>
               </div>
 
-              {/* ✅ Zone éditable */}
               <div
                 ref={editableRef}
                 contentEditable
@@ -398,7 +380,8 @@ export default function AppPage() {
                 key={activeTab}
                 dangerouslySetInnerHTML={{ __html: getActiveText().replace(/\n/g, '<br>') }}
                 style={{
-                  padding: '24px',
+                  // ✅ MODIFICATION 4 — Padding plus généreux
+                  padding: '32px 36px',
                   fontSize: '14px',
                   lineHeight: 1.85,
                   color: '#18181A',
@@ -409,7 +392,6 @@ export default function AppPage() {
               />
             </div>
 
-            {/* ✅ Boutons de diffusion vers les portails */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6B6B65' }}>
                 Publier sur un portail
@@ -455,7 +437,6 @@ export default function AppPage() {
   )
 }
 
-// ✅ Style des boutons de la barre d'outils
 const toolBtnStyle: React.CSSProperties = {
   padding: '6px 12px',
   background: 'transparent',
