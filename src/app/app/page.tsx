@@ -49,6 +49,18 @@ export default function AppPage() {
   const [credits, setCredits] = useState<UserCredits | null>(null)
   const [profile, setProfile] = useState<{ plan: Formule } | null>(null)
 
+  // ✅ Auto-complétion adresse
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([])
+  const [addressLoading, setAddressLoading] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const addressRef = useRef<HTMLDivElement>(null)
+
+  // ✅ Barre d'outils flottante
+  const [toolbarVisible, setToolbarVisible] = useState(false)
+  const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 })
+  const [selectedText, setSelectedText] = useState('')
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false)
+
   useEffect(() => {
     async function loadUserData() {
       const supabase = createClient()
@@ -92,6 +104,73 @@ export default function AppPage() {
 
     loadUserData()
   }, [])
+
+  // ✅ Fermer les suggestions d'adresse quand on clique ailleurs
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (addressRef.current && !addressRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // ✅ Gérer la barre d'outils flottante sur sélection de texte
+  useEffect(() => {
+    function handleSelection() {
+      const selection = window.getSelection()
+      if (!selection || selection.isCollapsed || !editableRef.current?.contains(selection.anchorNode)) {
+        setToolbarVisible(false)
+        return
+      }
+      const text = selection.toString().trim()
+      if (!text) {
+        setToolbarVisible(false)
+        return
+      }
+      setSelectedText(text)
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      setToolbarPosition({
+        top: rect.top - 50,
+        left: rect.left + rect.width / 2 - 80,
+      })
+      setToolbarVisible(true)
+    }
+    document.addEventListener('mouseup', handleSelection)
+    document.addEventListener('keyup', handleSelection)
+    return () => {
+      document.removeEventListener('mouseup', handleSelection)
+      document.removeEventListener('keyup', handleSelection)
+    }
+  }, [])
+
+  // ✅ Auto-complétion adresse (API gouvernementale gratuite)
+  async function searchAddress(query: string) {
+    if (query.length < 3) {
+      setAddressSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    setAddressLoading(true)
+    try {
+      const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`)
+      const data = await res.json()
+      setAddressSuggestions(data.features?.map((f: any) => f.properties.label) || [])
+      setShowSuggestions(true)
+    } catch {
+      setAddressSuggestions([])
+    } finally {
+      setAddressLoading(false)
+    }
+  }
+
+  function selectAddress(address: string) {
+    update('localisation', address)
+    setShowSuggestions(false)
+    setAddressSuggestions([])
+  }
 
   function update(field: keyof FormData, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -156,9 +235,44 @@ export default function AppPage() {
     return ''
   }
 
+  function getEditedHTML(): string {
+    if (editableRef.current) {
+      return editableRef.current.innerHTML || ''
+    }
+    return ''
+  }
+
   function execFormat(command: string, value?: string) {
     document.execCommand(command, false, value)
     editableRef.current?.focus()
+  }
+
+  // ✅ Suggestion IA contextuelle
+  async function handleAISuggestion() {
+    if (!selectedText || !editableRef.current) return
+    setAiSuggestionLoading(true)
+    try {
+      const res = await fetch('/api/improve-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: selectedText, type: form.type, persona }),
+      })
+      const data = await res.json()
+      if (data.improved) {
+        const selection = window.getSelection()
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0)
+          range.deleteContents()
+          range.insertNode(document.createTextNode(data.improved))
+        }
+        showToast('Texte amélioré ✨')
+      }
+    } catch {
+      showToast('Erreur lors de la suggestion')
+    } finally {
+      setAiSuggestionLoading(false)
+      setToolbarVisible(false)
+    }
   }
 
   function copyAndOpen(url: string) {
@@ -293,7 +407,49 @@ export default function AppPage() {
           <div><span style={labelStyle}>Chambres</span><input type="number" value={form.chambres} onChange={e => update('chambres', e.target.value)} style={inputStyle} placeholder="2" /></div>
         </div>
 
-        <div><span style={labelStyle}>Localisation *</span><input type="text" value={form.localisation} onChange={e => update('localisation', e.target.value)} style={inputStyle} placeholder="Lyon 6ème, Rhône" /></div>
+        {/* ✅ Localisation avec auto-complétion */}
+        <div ref={addressRef} style={{ position: 'relative' }}>
+          <span style={labelStyle}>Localisation *</span>
+          <input
+            type="text"
+            value={form.localisation}
+            onChange={e => { update('localisation', e.target.value); searchAddress(e.target.value) }}
+            onFocus={() => { if (addressSuggestions.length > 0) setShowSuggestions(true) }}
+            style={inputStyle}
+            placeholder="Ex: 15 rue de la Paix, Paris"
+          />
+          {addressLoading && (
+            <div style={{ position: 'absolute', right: '12px', top: '38px', zIndex: 10 }}>
+              <span style={{ width: '14px', height: '14px', border: '2px solid rgba(201,169,110,0.3)', borderTopColor: T.gold, borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+            </div>
+          )}
+          {showSuggestions && addressSuggestions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+              background: T.surface, border: `1px solid ${T.border}`, borderRadius: '4px',
+              marginTop: '4px', maxHeight: '200px', overflowY: 'auto',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+            }}>
+              {addressSuggestions.map((addr, i) => (
+                <div
+                  key={i}
+                  onClick={() => selectAddress(addr)}
+                  style={{
+                    padding: '10px 14px', cursor: 'pointer',
+                    fontSize: '12px', color: T.dark,
+                    borderBottom: i < addressSuggestions.length - 1 ? `1px solid ${T.border}` : 'none',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = T.goldBg)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  📍 {addr}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div><span style={labelStyle}>Prix *</span><input type="text" value={form.prix} onChange={e => update('prix', e.target.value)} style={inputStyle} placeholder="450 000 €" /></div>
         <div><span style={labelStyle}>Points forts</span><textarea value={form.pointsForts} onChange={e => update('pointsForts', e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Vue, parquet chêne, cave…" /></div>
         <div><span style={labelStyle}>Infos complémentaires</span><textarea value={form.infoCompl} onChange={e => update('infoCompl', e.target.value)} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} placeholder="DPE, charges, travaux récents…" /></div>
@@ -323,7 +479,6 @@ export default function AppPage() {
 
       </aside>
 
-      {/* ✅ MODIFICATION 1 — Fond du main plus sombre */}
       <main style={{ background: '#EAEAE6', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
         {!result && !loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
@@ -344,7 +499,6 @@ export default function AppPage() {
         )}
         {result && (
           <div ref={resultRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* ✅ MODIFICATION 3 — En-tête fond blanc + ombre */}
             <div style={{ background: '#FFFFFF', borderTop: '3px solid #C9A96E', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 500 }}>{result.bien}</div>
@@ -356,8 +510,9 @@ export default function AppPage() {
               </div>
             </div>
 
-            {/* ✅ MODIFICATION 2 — Zone éditable fond blanc + ombre + bordure gauche dorée */}
-            <div style={{ background: '#FFFFFF', border: '1px solid #D8D8D4', borderLeft: '3px solid #C9A96E', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+            {/* ✅ Zone éditable avec barre flottante */}
+            <div style={{ background: '#FFFFFF', border: '1px solid #D8D8D4', borderLeft: '3px solid #C9A96E', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'relative' }}>
+              {/* Barre d'outils fixe (onglets + mise en forme) */}
               <div style={{ display: 'flex', borderBottom: '1px solid #E8E8E4' }}>
                 {(['fr', 'en', 'short'] as const).map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '12px 20px', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab ? '#C9A96E' : 'transparent'}`, color: activeTab === tab ? '#C9A96E' : '#6B6B65', fontFamily: "'DM Sans', sans-serif", marginBottom: '-1px' } as React.CSSProperties}>{tab === 'fr' ? 'Français' : tab === 'en' ? 'English' : 'Réseaux'}</button>
@@ -380,7 +535,6 @@ export default function AppPage() {
                 key={activeTab}
                 dangerouslySetInnerHTML={{ __html: getActiveText().replace(/\n/g, '<br>') }}
                 style={{
-                  // ✅ MODIFICATION 4 — Padding plus généreux
                   padding: '32px 36px',
                   fontSize: '14px',
                   lineHeight: 1.85,
@@ -390,8 +544,35 @@ export default function AppPage() {
                   whiteSpace: 'pre-wrap',
                 }}
               />
+
+              {/* ✅ Barre d'outils flottante (apparaît sur sélection) */}
+              {toolbarVisible && (
+                <div style={{
+                  position: 'fixed',
+                  top: toolbarPosition.top,
+                  left: toolbarPosition.left,
+                  zIndex: 9999,
+                  background: '#18181A',
+                  border: `1px solid ${T.border}`,
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  display: 'flex',
+                  gap: '4px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  animation: 'fadeIn 0.15s ease',
+                }}>
+                  <button onClick={() => execFormat('bold')} style={floatingBtnStyle} title="Gras"><strong>G</strong></button>
+                  <button onClick={() => execFormat('italic')} style={floatingBtnStyle} title="Italique"><em>I</em></button>
+                  <button onClick={() => execFormat('underline')} style={floatingBtnStyle} title="Souligné"><u>S</u></button>
+                  <span style={{ width: '1px', background: T.border, margin: '0 4px' }} />
+                  <button onClick={handleAISuggestion} disabled={aiSuggestionLoading} style={{ ...floatingBtnStyle, color: T.gold, borderColor: 'rgba(201,169,110,0.4)' }} title="Améliorer avec l'IA">
+                    {aiSuggestionLoading ? '⏳' : '✨'}
+                  </button>
+                </div>
+              )}
             </div>
 
+            {/* ✅ Boutons de diffusion */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6B6B65' }}>
                 Publier sur un portail
@@ -432,6 +613,7 @@ export default function AppPage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   )
@@ -446,5 +628,17 @@ const toolBtnStyle: React.CSSProperties = {
   fontSize: '12px',
   cursor: 'pointer',
   borderRadius: '3px',
+  transition: 'all 0.15s',
+}
+
+const floatingBtnStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  background: 'transparent',
+  border: `1px solid #333336`,
+  color: '#FAFAF7',
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: '12px',
+  cursor: 'pointer',
+  borderRadius: '4px',
   transition: 'all 0.15s',
 }
