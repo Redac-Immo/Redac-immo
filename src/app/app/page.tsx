@@ -59,6 +59,7 @@ export default function AppPage() {
   const [selectedText, setSelectedText] = useState('')
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false)
   const savedRangeRef = useRef<Range | null>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function loadUserData() {
@@ -85,42 +86,58 @@ export default function AppPage() {
     loadUserData()
   }, [])
 
+  // Fermer les suggestions d'adresse quand on clique ailleurs
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) { if (addressRef.current && !addressRef.current.contains(e.target as Node)) setShowSuggestions(false) }
+    function handleClickOutside(e: MouseEvent) {
+      if (addressRef.current && !addressRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // ✅ Gérer la barre d'outils flottante — correction
+  // ✅ Gérer la barre d'outils flottante — RESTE VISIBLE
   function handleTextSelection() {
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      setToolbarVisible(false)
-      return
-    }
-    const range = selection.getRangeAt(0)
-    const text = selection.toString().trim()
-    if (!text || !editableRef.current?.contains(range.commonAncestorContainer)) {
-      setToolbarVisible(false)
-      return
-    }
-    savedRangeRef.current = range.cloneRange()
-    setSelectedText(text)
-    const rect = range.getBoundingClientRect()
-    setToolbarPosition({ top: rect.top - 52, left: rect.left + rect.width / 2 - 90 })
-    setToolbarVisible(true)
+    // Petit délai pour laisser le navigateur terminer la sélection
+    setTimeout(() => {
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
+      const range = selection.getRangeAt(0)
+      const text = selection.toString().trim()
+      if (!text || !editableRef.current?.contains(range.commonAncestorContainer)) return
+      savedRangeRef.current = range.cloneRange()
+      setSelectedText(text)
+      const rect = range.getBoundingClientRect()
+      setToolbarPosition({
+        top: rect.top + window.scrollY - 52,
+        left: rect.left + window.scrollX + rect.width / 2 - 90,
+      })
+      setToolbarVisible(true)
+    }, 50)
   }
 
+  // ✅ Fermer la barre si on clique en dehors de l'éditeur ET de la barre
   useEffect(() => {
-    document.addEventListener('mouseup', handleTextSelection)
-    document.addEventListener('keyup', handleTextSelection)
+    function handleMouseUp() { handleTextSelection() }
+    function handleKeyUp() { handleTextSelection() }
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (editableRef.current?.contains(target)) return // clic dans l'éditeur → on garde
+      if (toolbarRef.current?.contains(target)) return // clic dans la barre → on garde
+      setToolbarVisible(false)
+    }
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('keyup', handleKeyUp)
+    document.addEventListener('mousedown', handleClickOutside)
     return () => {
-      document.removeEventListener('mouseup', handleTextSelection)
-      document.removeEventListener('keyup', handleTextSelection)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('keyup', handleKeyUp)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 
-  // ✅ Appliquer un style via execCommand (fonctionne dans contentEditable)
+  // ✅ Appliquer un style en restaurant la sélection sauvegardée
   function execFormat(command: string) {
     if (!editableRef.current) return
     editableRef.current.focus()
@@ -141,7 +158,11 @@ export default function AppPage() {
     if (!selectedText || !editableRef.current) return
     setAiSuggestionLoading(true)
     try {
-      const res = await fetch('/api/improve-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: selectedText, type: form.type, persona }) })
+      const res = await fetch('/api/improve-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: selectedText, type: form.type, persona }),
+      })
       const data = await res.json()
       if (data.improved && savedRangeRef.current) {
         const selection = window.getSelection()
@@ -153,8 +174,12 @@ export default function AppPage() {
         savedRangeRef.current.insertNode(document.createTextNode(data.improved))
         showToast('Texte amélioré ✨')
       }
-    } catch { showToast('Erreur lors de la suggestion') }
-    finally { setAiSuggestionLoading(false); setToolbarVisible(false) }
+    } catch {
+      showToast('Erreur lors de la suggestion')
+    } finally {
+      setAiSuggestionLoading(false)
+      setToolbarVisible(false)
+    }
   }
 
   async function searchAddress(query: string) {
@@ -291,8 +316,9 @@ export default function AppPage() {
 
               <div ref={editableRef} contentEditable suppressContentEditableWarning key={activeTab} dangerouslySetInnerHTML={{ __html: getActiveText().replace(/\n/g, '<br>') }} style={{ padding: '32px 36px', fontSize: '14px', lineHeight: 1.85, color: '#18181A', minHeight: '200px', outline: 'none', whiteSpace: 'pre-wrap' }} />
 
+              {/* ✅ Barre d'outils flottante — RESTE VISIBLE */}
               {toolbarVisible && (
-                <div style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, zIndex: 9999, background: '#18181A', border: `1px solid ${T.border}`, borderRadius: '8px', padding: '6px 8px', display: 'flex', gap: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', animation: 'fadeIn 0.15s ease' }}>
+                <div ref={toolbarRef} className="floating-toolbar" style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, zIndex: 9999, background: '#18181A', border: `1px solid ${T.border}`, borderRadius: '8px', padding: '6px 8px', display: 'flex', gap: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', animation: 'fadeIn 0.15s ease' }}>
                   <button onClick={() => execFormat('bold')} style={floatingBtnStyle} title="Gras"><strong>G</strong></button>
                   <button onClick={() => execFormat('italic')} style={floatingBtnStyle} title="Italique"><em>I</em></button>
                   <button onClick={() => execFormat('underline')} style={floatingBtnStyle} title="Souligné"><u>S</u></button>
