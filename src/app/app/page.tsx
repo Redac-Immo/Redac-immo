@@ -86,100 +86,97 @@ export default function AppPage() {
     loadUserData()
   }, [])
 
-  // Fermer les suggestions d'adresse quand on clique ailleurs
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (addressRef.current && !addressRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false)
-      }
+      if (addressRef.current && !addressRef.current.contains(e.target as Node)) setShowSuggestions(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // ✅ Gérer la barre d'outils flottante — RESTE VISIBLE
+  // ✅ Afficher la barre flottante sur sélection
   function handleTextSelection() {
-    // Petit délai pour laisser le navigateur terminer la sélection
-    setTimeout(() => {
-      const selection = window.getSelection()
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
-      const range = selection.getRangeAt(0)
-      const text = selection.toString().trim()
-      if (!text || !editableRef.current?.contains(range.commonAncestorContainer)) return
-      savedRangeRef.current = range.cloneRange()
-      setSelectedText(text)
-      const rect = range.getBoundingClientRect()
-      setToolbarPosition({
-        top: rect.top + window.scrollY - 52,
-        left: rect.left + window.scrollX + rect.width / 2 - 90,
-      })
-      setToolbarVisible(true)
-    }, 50)
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      // Ne pas masquer tout de suite, on attend un clic ailleurs
+      return
+    }
+    const range = selection.getRangeAt(0)
+    const text = selection.toString().trim()
+    if (!text || !editableRef.current?.contains(range.commonAncestorContainer)) return
+    savedRangeRef.current = range.cloneRange()
+    setSelectedText(text)
+    const rect = range.getBoundingClientRect()
+    setToolbarPosition({
+      top: rect.top + window.scrollY - 52,
+      left: rect.left + window.scrollX + rect.width / 2 - 90,
+    })
+    setToolbarVisible(true)
   }
 
-  // ✅ Fermer la barre si on clique en dehors de l'éditeur ET de la barre
+  // ✅ Fermer la barre si on clique en dehors
   useEffect(() => {
-    function handleMouseUp() { handleTextSelection() }
-    function handleKeyUp() { handleTextSelection() }
-    function handleClickOutside(e: MouseEvent) {
+    function handleMouseUp() { setTimeout(handleTextSelection, 10) }
+    function handleKeyUp() { setTimeout(handleTextSelection, 10) }
+    function handleClick(e: MouseEvent) {
       const target = e.target as HTMLElement
-      if (editableRef.current?.contains(target)) return // clic dans l'éditeur → on garde
-      if (toolbarRef.current?.contains(target)) return // clic dans la barre → on garde
+      if (toolbarRef.current?.contains(target)) return // clic dans la barre → garder
+      if (editableRef.current?.contains(target)) return // clic dans l'éditeur → garder
       setToolbarVisible(false)
     }
     document.addEventListener('mouseup', handleMouseUp)
     document.addEventListener('keyup', handleKeyUp)
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('mousedown', handleClick)
     return () => {
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('keyup', handleKeyUp)
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('mousedown', handleClick)
     }
   }, [])
 
-  // ✅ Appliquer un style en restaurant la sélection sauvegardée
+  // ✅ Appliquer un style SANS déplacer le curseur
   function execFormat(command: string) {
-    if (!editableRef.current) return
-    editableRef.current.focus()
-    if (savedRangeRef.current) {
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(savedRangeRef.current)
-      }
+    // Sauvegarder la sélection AVANT de cliquer
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange()
     }
+    if (!savedRangeRef.current) return
+
+    // Restaurer la sélection
+    const selection = window.getSelection()
+    if (selection) {
+      selection.removeAllRanges()
+      selection.addRange(savedRangeRef.current)
+    }
+
+    // Appliquer le style
     document.execCommand(command, false)
-    editableRef.current.focus()
+
+    // Garder le focus dans l'éditeur
+    editableRef.current?.focus()
     setToolbarVisible(false)
   }
 
-  // ✅ Suggestion IA contextuelle
+  // ✅ Suggestion IA
   async function handleAISuggestion() {
     if (!selectedText || !editableRef.current) return
     setAiSuggestionLoading(true)
     try {
       const res = await fetch('/api/improve-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: selectedText, type: form.type, persona }),
       })
       const data = await res.json()
       if (data.improved && savedRangeRef.current) {
-        const selection = window.getSelection()
-        if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(savedRangeRef.current)
-        }
+        const sel = window.getSelection()
+        if (sel) { sel.removeAllRanges(); sel.addRange(savedRangeRef.current) }
         savedRangeRef.current.deleteContents()
         savedRangeRef.current.insertNode(document.createTextNode(data.improved))
         showToast('Texte amélioré ✨')
       }
-    } catch {
-      showToast('Erreur lors de la suggestion')
-    } finally {
-      setAiSuggestionLoading(false)
-      setToolbarVisible(false)
-    }
+    } catch { showToast('Erreur lors de la suggestion') }
+    finally { setAiSuggestionLoading(false); setToolbarVisible(false) }
   }
 
   async function searchAddress(query: string) {
@@ -316,14 +313,13 @@ export default function AppPage() {
 
               <div ref={editableRef} contentEditable suppressContentEditableWarning key={activeTab} dangerouslySetInnerHTML={{ __html: getActiveText().replace(/\n/g, '<br>') }} style={{ padding: '32px 36px', fontSize: '14px', lineHeight: 1.85, color: '#18181A', minHeight: '200px', outline: 'none', whiteSpace: 'pre-wrap' }} />
 
-              {/* ✅ Barre d'outils flottante — RESTE VISIBLE */}
               {toolbarVisible && (
                 <div ref={toolbarRef} className="floating-toolbar" style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, zIndex: 9999, background: '#18181A', border: `1px solid ${T.border}`, borderRadius: '8px', padding: '6px 8px', display: 'flex', gap: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', animation: 'fadeIn 0.15s ease' }}>
-                  <button onClick={() => execFormat('bold')} style={floatingBtnStyle} title="Gras"><strong>G</strong></button>
-                  <button onClick={() => execFormat('italic')} style={floatingBtnStyle} title="Italique"><em>I</em></button>
-                  <button onClick={() => execFormat('underline')} style={floatingBtnStyle} title="Souligné"><u>S</u></button>
+                  <button onMouseDown={(e) => { e.preventDefault(); execFormat('bold') }} style={floatingBtnStyle} title="Gras"><strong>G</strong></button>
+                  <button onMouseDown={(e) => { e.preventDefault(); execFormat('italic') }} style={floatingBtnStyle} title="Italique"><em>I</em></button>
+                  <button onMouseDown={(e) => { e.preventDefault(); execFormat('underline') }} style={floatingBtnStyle} title="Souligné"><u>S</u></button>
                   <span style={{ width: '1px', background: T.border, margin: '0 4px' }} />
-                  <button onClick={handleAISuggestion} disabled={aiSuggestionLoading} style={{ ...floatingBtnStyle, color: T.gold, borderColor: 'rgba(201,169,110,0.4)' }} title="Améliorer avec l'IA">{aiSuggestionLoading ? '⏳' : '✨'}</button>
+                  <button onMouseDown={(e) => { e.preventDefault(); handleAISuggestion() }} disabled={aiSuggestionLoading} style={{ ...floatingBtnStyle, color: T.gold, borderColor: 'rgba(201,169,110,0.4)' }} title="Améliorer avec l'IA">{aiSuggestionLoading ? '⏳' : '✨'}</button>
                 </div>
               )}
             </div>
