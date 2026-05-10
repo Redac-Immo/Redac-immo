@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { GenerateRequest, GenerateResponse } from '@/types'
+import type { GenerateRequest, GenerateResponse, ScoringResult } from '@/types'
 import { resend } from '@/lib/resend/client'
 import { templateConfirmationAnnonce } from '@/lib/resend/templates/confirmation-annonce'
 import { rateLimit } from '@/lib/rate-limit'
@@ -293,6 +293,9 @@ export async function POST(request: NextRequest) {
 
     // ─── SCORING AUTOMATIQUE ──────────────────────────────────
     
+    // ✅ Stocker le scoring pour le retour
+    let savedScoring: ScoringResult | null = null
+
     if (annonce?.id) {
       try {
         const scoringResult = await scoreAnnonce({
@@ -318,6 +321,8 @@ export async function POST(request: NextRequest) {
             persona_cible: scoringResult.persona_cible,
           })
 
+          // ✅ Sauvegarder le résultat pour l'inclure dans la réponse
+          savedScoring = scoringResult
           console.log(`✅ [generate] Scoring enregistré pour annonce ${annonce.id}`)
         }
       } catch (scoringErr) {
@@ -355,7 +360,8 @@ export async function POST(request: NextRequest) {
       console.error('[generate] Exception email annonce:', emailErr)
     }
 
-    return NextResponse.json({ ...generated, annonceId: annonce?.id ?? null, reference })
+    // ✅ Retourner aussi le scoring
+    return NextResponse.json({ ...generated, annonceId: annonce?.id ?? null, reference, scoring: savedScoring })
 
   } catch (error) {
     console.error('[generate] Error:', error)

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import type { Formule, GenerateResponse, UserCredits } from '@/types'
+import type { Formule, GenerateResponse, UserCredits, PropertyScore } from '@/types'
 import ImageUploader from '@/components/ImageUploader'
 import { T } from '@/lib/design-tokens'
 
@@ -34,12 +34,35 @@ const PORTAILS = [
   { name: 'Meilleurs Agents', url: 'https://www.meilleursagents.com/deposer-une-annonce' },
 ]
 
+// Simuler un prix moyen au m² par grande ville (pour démo)
+const PRIX_MOYEN: Record<string, number> = {
+  'paris': 10500,
+  'lyon': 5200,
+  'marseille': 3800,
+  'bordeaux': 4800,
+  'lille': 3800,
+  'toulouse': 3600,
+  'nantes': 4100,
+  'strasbourg': 3500,
+  'montpellier': 3700,
+  'rennes': 3800,
+}
+
+function getPrixMoyen(localisation: string): number | null {
+  const ville = localisation.toLowerCase().split(',')[0].trim()
+  for (const [key, val] of Object.entries(PRIX_MOYEN)) {
+    if (ville.includes(key)) return val
+  }
+  return null
+}
+
 export default function AppPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [formule, setFormule] = useState<Formule>('essentiel')
   const [persona, setPersona] = useState<string>('Élise')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<(GenerateResponse & { bien: string; prix: string }) | null>(null)
+  const [scoring, setScoring] = useState<PropertyScore | null>(null)
   const [activeTab, setActiveTab] = useState<'fr' | 'en' | 'short'>('fr')
   const [toast, setToast] = useState<string | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
@@ -97,12 +120,13 @@ export default function AppPage() {
   async function handleGenerate() {
     if (!form.surface || !form.localisation || !form.prix) { showToast('Remplissez les champs obligatoires'); return }
     if (credits && !credits.isUnlimited && credits.credits_remaining === 0) { showToast('Aucun crédit disponible'); return }
-    setLoading(true); setResult(null)
+    setLoading(true); setResult(null); setScoring(null)
     try {
       const res = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, formule, persona, images }) })
       if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? 'Erreur serveur') }
       const data = await res.json()
       setResult({ fr: data.fr, en: data.en, short: data.short, bien: `${form.type} — ${form.localisation}`, prix: form.prix })
+      setScoring(data.scoring || null)
       setActiveTab('fr')
       if (credits && !credits.isUnlimited) setCredits({ ...credits, credits_remaining: credits.credits_remaining - 1 })
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
@@ -127,8 +151,15 @@ export default function AppPage() {
   const labelStyle: React.CSSProperties = { fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.gold, marginBottom: '8px', display: 'block' }
   const isGenerateDisabled = loading || (credits ? (!credits.isUnlimited && credits.credits_remaining === 0) : false)
 
+  // Calculs pour l'analyse
+  const prixMarché = result && form.surface ? getPrixMoyen(form.localisation) : null
+  const prixBien = parseFloat(form.prix?.replace(/[^0-9]/g, '')) || 0
+  const surfaceBien = parseFloat(form.surface) || 1
+  const prixM2Bien = prixBien / surfaceBien
+  const ecartPrix = prixMarché ? ((prixM2Bien - prixMarché) / prixMarché * 100).toFixed(1) : null
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'grid', gridTemplateColumns: result ? '380px 1fr 280px' : '380px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", transition: 'all 0.3s' }}>
       <aside style={{ background: T.bg, padding: '36px 32px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
         <div><div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginBottom: '8px' }}><span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', color: T.dark }}>Redac</span><span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontStyle: 'italic', color: T.gold, fontWeight: 300 }}>-Immo</span></div><Link href="/dashboard" style={{ fontSize: '11px', color: T.mid, textDecoration: 'none', letterSpacing: '0.1em' }}>← Dashboard</Link></div>
         <div style={{ background: T.surface, border: `2px solid ${T.gold}`, padding: '16px', borderRadius: '4px' }}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}><span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase' }}>Formule actuelle</span><span style={{ fontSize: '12px', fontWeight: 500, color: T.gold, textTransform: 'uppercase' }}>{profile?.plan || 'Chargement...'}</span></div><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: '11px', color: T.mid, textTransform: 'uppercase' }}>Crédits</span><span style={{ fontSize: '14px', fontWeight: 600, color: credits?.isUnlimited ? T.ok : T.dark }}>{credits?.isUnlimited ? 'Illimités' : credits?.credits_remaining ?? '—'}</span></div><Link href="/dashboard?section=commande" style={{ display: 'block', marginTop: '12px', padding: '8px 12px', background: 'transparent', border: `1px solid ${T.border}`, color: T.gold, fontSize: '11px', textAlign: 'center', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'all 0.2s' }}>Changer de formule</Link></div>
@@ -162,6 +193,56 @@ export default function AppPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}><div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6B6B65' }}>Publier sur un portail</div><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>{PORTAILS.map(p => (<button key={p.name} onClick={() => copyAndOpen(p.url)} style={{ padding: '10px 12px', background: '#18181A', color: '#FAFAF7', border: '1px solid #333336', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', letterSpacing: '0.08em', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>{p.name} →</button>))}</div></div>
         </div>)}
       </main>
+
+      {/* ✅ Colonne d'analyse (visible seulement si result existe) */}
+      {result && (
+        <aside style={{ background: '#F2F2EE', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', borderLeft: `1px solid #E8E8E4` }}>
+          
+          {/* Indice de vendabilité */}
+          {scoring && (
+            <div style={{ background: '#FFFFFF', border: '1px solid #E8E8E4', borderRadius: '6px', padding: '20px' }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.mid, marginBottom: '12px' }}>🏆 Indice de vendabilité</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: scoring.note_globale >= 7 ? T.okBg : scoring.note_globale >= 5 ? 'rgba(201,169,110,0.2)' : T.errBg, border: `3px solid ${scoring.note_globale >= 7 ? T.ok : scoring.note_globale >= 5 ? T.gold : T.err}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 600, color: T.dark }}>
+                  {scoring.note_globale}
+                </div>
+                <div style={{ fontSize: '13px', color: T.dark, fontWeight: 500 }}>
+                  {scoring.note_globale >= 7 ? 'Excellent' : scoring.note_globale >= 5 ? 'Bon' : 'À améliorer'}
+                </div>
+              </div>
+              <div style={{ fontSize: '11px', color: T.mid, lineHeight: 1.5 }}>
+                Profil acheteur : <strong style={{ color: T.dark }}>{scoring.persona_cible}</strong>
+              </div>
+            </div>
+          )}
+
+          {/* Prix vs Marché */}
+          {prixMarché && (
+            <div style={{ background: '#FFFFFF', border: '1px solid #E8E8E4', borderRadius: '6px', padding: '20px' }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: T.mid, marginBottom: '12px' }}>💰 Prix vs Marché</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: T.dark }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Prix du bien :</span><span style={{ fontWeight: 600 }}>{prixBien.toLocaleString('fr-FR')} €</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Prix/m² :</span><span style={{ fontWeight: 600 }}>{Math.round(prixM2Bien).toLocaleString('fr-FR')} €</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Moyenne quartier :</span><span style={{ fontWeight: 600 }}>{prixMarché.toLocaleString('fr-FR')} €/m²</span></div>
+                <div style={{ height: '1px', background: '#E8E8E4', margin: '8px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Écart :</span>
+                  <span style={{ fontWeight: 600, color: parseFloat(ecartPrix || '0') > 5 ? T.err : parseFloat(ecartPrix || '0') < -5 ? T.ok : T.gold }}>
+                    {ecartPrix}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Si pas de données */}
+          {!scoring && !prixMarché && (
+            <div style={{ fontSize: '12px', color: T.mid, textAlign: 'center', padding: '40px 0' }}>
+              Analyse du bien en cours...
+            </div>
+          )}
+        </aside>
+      )}
       {toast && (<div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999, background: T.bg, color: T.dark, padding: '14px 24px', fontSize: '13px', borderLeft: `3px solid ${T.gold}`, animation: 'slideUp 0.3s ease' }}>{toast}</div>)}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
     </div>
