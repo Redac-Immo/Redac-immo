@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
       .from('annonces')
       .insert({
         user_id: user.id,
-        reference, // ✅ Référence ajoutée
+        reference,
         bien: `${body.type} — ${body.localisation}`,
         prix: body.prix,
         localisation: body.localisation,
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── PROMPT BUILDER (AVEC SUPPORT IMAGES) ─────────────────────
+// ─── PROMPT BUILDER (AVEC SUPPORT IMAGES ET RENFORCEMENT EN/SHORT) ─────────────────────
 
 function buildPrompt(d: GenerateRequest & { persona?: string; images?: string[] }): {
   systemPrompt: string
@@ -393,16 +393,21 @@ function buildPrompt(d: GenerateRequest & { persona?: string; images?: string[] 
     ? '\n\nDes photos du bien sont fournies. Analyse-les pour enrichir ta description : mentionne les matériaux visibles (parquet, carrelage, pierre, etc.), la luminosité, les volumes, la vue depuis les fenêtres, l\'état général, les éléments remarquables (cheminée, poutres apparentes, terrasse, jardin, etc.). Sois précis et factuel. N\'invente rien que tu ne vois pas sur les photos.'
     : ''
 
+  // ✅ RENFORCEMENT : Forcer les 3 clés même pour les formules non Basique
+  const jsonInstructions = d.formule === 'basique'
+    ? `Tu réponds UNIQUEMENT avec un JSON valide complet, sans markdown, sans backticks.
+Format exact attendu :
+{"fr": "texte de l'annonce en français", "en": "", "short": ""}`
+    : `Tu réponds UNIQUEMENT avec un JSON valide complet, sans markdown, sans backticks.
+IMPORTANT : Tu DOIS inclure les 3 clés "fr", "en", "short". Le champ "en" doit contenir la version anglaise complète de l'annonce. Le champ "short" doit contenir un résumé percutant de 280 caractères max pour les réseaux sociaux.
+Format exact attendu :
+{"fr": "texte français", "en": "english text", "short": "résumé réseaux"}`;
+
   const systemPrompt = `${persona.system}
 
 ${outputInstructions}${imageInstructions}
 
-Tu réponds UNIQUEMENT avec un JSON valide, sans markdown, sans backticks :
-{
-  "fr": "texte de l'annonce en français",
-  "en": "english version (empty string if Basique)",
-  "short": "version réseaux sociaux (empty string if Basique)"
-}`
+${jsonInstructions}`
 
   const userPrompt = `${fewShot}
 
